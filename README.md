@@ -46,7 +46,22 @@ proper darkness* — and then shows you the frame.
 
 ## Running it
 
-### GitHub Pages (recommended)
+### GitHub Pages from a phone (no terminal)
+
+`deploy/` is the same app as six flat files — no subdirectories — so it can be
+multi-selected in a file picker and uploaded straight through GitHub's web UI:
+
+1. github.com → **+** → **New repository** → name it, **Public**, create it with
+   no README and no .gitignore.
+2. On the empty repo page tap **uploading an existing file**, choose all six
+   files from `deploy/`, and commit.
+3. **Settings → Pages → Deploy from a branch → main / (root)**.
+
+Live a minute later, with HTTPS, the service worker, GPS and the compass all
+working. `index.html` there is the whole app inlined; the other five files are
+the icons, manifest and service worker that make it installable.
+
+### GitHub Pages from a machine with git (recommended)
 
 ```bash
 git init && git add -A && git commit -m "AstroScout"
@@ -156,7 +171,8 @@ js/app.js               state, loop, input, glue
 js/presets.js           locations, sky-quality presets, lens list
 build.py                single-file bundler
 test/                   node test suites + a headless-browser render test
-dist/astroscout.html    single-file build
+dist/astroscout.html    single-file build, opens straight off disk
+deploy/                 flat six-file bundle for uploading to a static host
 ```
 
 The four `no DOM` modules run under Node, which is why they can be tested

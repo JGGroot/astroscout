@@ -74,3 +74,114 @@ def build():
     print('dist/artifact.html   %.0f KB' % (len(inner) / 1024))
 
 build()
+
+def build_deploy():
+    """A flat, five-file bundle: everything a static host needs, no
+    subdirectories, so it can be multi-selected and uploaded from a phone."""
+    import shutil
+    d = ROOT / 'deploy'
+    d.mkdir(exist_ok=True)
+    css = (ROOT / 'css' / 'app.css').read_text()
+    js = bundle_js()
+    html = (ROOT / 'index.html').read_text()
+    body = re.search(r'<body>(.*)</body>', html, re.S).group(1)
+    body = re.sub(r'<script.*?</script>', '', body, flags=re.S).strip()
+
+    page = f'''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AstroScout — Milky Way shot planner</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="description" content="Real 1:1 terrain under an astronomically accurate sky. Plan Milky Way compositions over mountains.">
+<meta name="theme-color" content="#07080c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AstroScout">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+{css}
+</style>
+</head>
+<body>
+{body}
+<script>
+{js}
+</script>
+<script>
+if ('serviceWorker' in navigator) {{
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {{}}));
+}}
+</script>
+</body>
+</html>
+'''
+    (d / 'index.html').write_text(page)
+
+    manifest = {
+        "name": "AstroScout — Milky Way shot planner",
+        "short_name": "AstroScout",
+        "description": "Real 1:1 terrain under an astronomically accurate sky, for planning Milky Way landscape photography.",
+        "start_url": "./index.html", "scope": "./", "display": "standalone",
+        "orientation": "any", "background_color": "#07080c", "theme_color": "#07080c",
+        "categories": ["photo", "utilities", "travel"],
+        "icons": [
+            {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+        ]
+    }
+    (d / 'manifest.webmanifest').write_text(json.dumps(manifest, indent=2))
+
+    sw = '''/* sw.js — offline shell plus an opportunistic tile cache. */
+const VERSION = 'astroscout-flat-v1';
+const SHELL = ['./', './index.html', './manifest.webmanifest',
+  './icon-192.png', './icon-512.png', './icon-maskable.png'];
+const TILE_HOSTS = ['s3.amazonaws.com', 'elevation-tiles-prod.s3.amazonaws.com',
+  'services.arcgisonline.com', 'tile.openstreetmap.org',
+  'api.mapbox.com', 'api.maptiler.com', 'cdn.jsdelivr.net', 'unpkg.com'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys()
+    .then(ks => Promise.all(ks.filter(k => k !== VERSION && !k.endsWith('-tiles')).map(k => caches.delete(k))))
+    .then(() => self.clients.claim()));
+});
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET') return;
+  if (url.origin === location.origin) {
+    e.respondWith(caches.match(e.request).then(hit => {
+      const net = fetch(e.request).then(res => {
+        if (res && res.ok) caches.open(VERSION).then(c => c.put(e.request, res.clone()));
+        return res;
+      }).catch(() => hit);
+      return hit || net;
+    }));
+    return;
+  }
+  if (TILE_HOSTS.some(h => url.hostname.endsWith(h))) {
+    e.respondWith(caches.open(VERSION + '-tiles').then(async c => {
+      const hit = await c.match(e.request);
+      if (hit) return hit;
+      try {
+        const res = await fetch(e.request);
+        if (res && (res.ok || res.type === 'opaque')) c.put(e.request, res.clone());
+        return res;
+      } catch (err) { return hit || Response.error(); }
+    }));
+  }
+});
+'''
+    (d / 'sw.js').write_text(sw)
+    for n in ['icon-192.png', 'icon-512.png', 'icon-maskable.png']:
+        shutil.copy(ROOT / 'icons' / n, d / n)
+    total = sum(f.stat().st_size for f in d.iterdir())
+    print('deploy/: %d files, %.0f KB total' % (len(list(d.iterdir())), total / 1024))
+
+build_deploy()

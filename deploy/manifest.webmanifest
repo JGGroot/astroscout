@@ -1,0 +1,36 @@
+{
+  "name": "AstroScout \u2014 Milky Way shot planner",
+  "short_name": "AstroScout",
+  "description": "Real 1:1 terrain under an astronomically accurate sky, for planning Milky Way landscape photography.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07080c",
+  "theme_color": "#07080c",
+  "categories": [
+    "photo",
+    "utilities",
+    "travel"
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
