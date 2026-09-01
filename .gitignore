@@ -1,0 +1,5 @@
+node_modules/
+test/shots/*.png
+!test/shots/02-terrain.png
+!test/shots/05-south.png
+.DS_Store

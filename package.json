@@ -1,0 +1,15 @@
+{
+  "name": "astroscout",
+  "version": "1.0.0",
+  "description": "Real 1:1 terrain under an astronomically accurate sky, for planning Milky Way landscape photography.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "serve": "python3 -m http.server 8080",
+    "build": "python3 build.py",
+    "test": "node test/astro.test.mjs && node test/catalog.test.mjs && node test/planner.test.mjs",
+    "test:browser": "node test/browser.test.mjs"
+  },
+  "keywords": ["astrophotography", "milky-way", "terrain", "webgl", "pwa", "photography"],
+  "license": "MIT"
+}
