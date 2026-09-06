@@ -1,13 +1,15 @@
 /* sw.js — offline shell plus an opportunistic tile cache. */
-const VERSION = 'astroscout-flat-v1';
-const SHELL = ['./', './index.html', './manifest.webmanifest',
+const VERSION = 'astroscout-flat-v2';
+const SHELL = ['./', './index.html', './manifest.webmanifest?v=2',
   './icon-192.png', './icon-512.png', './icon-maskable.png'];
 const TILE_HOSTS = ['s3.amazonaws.com', 'elevation-tiles-prod.s3.amazonaws.com',
   'services.arcgisonline.com', 'tile.openstreetmap.org',
   'api.mapbox.com', 'api.maptiler.com', 'cdn.jsdelivr.net', 'unpkg.com'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION)
+    .then(c => Promise.allSettled(SHELL.map(url => c.add(url))))
+    .then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -22,7 +24,7 @@ self.addEventListener('fetch', e => {
       const net = fetch(e.request).then(res => {
         if (res && res.ok) caches.open(VERSION).then(c => c.put(e.request, res.clone()));
         return res;
-      }).catch(() => hit);
+      }).catch(() => hit || new Response('Temporarily offline', { status: 503 }));
       return hit || net;
     }));
     return;

@@ -4,9 +4,9 @@
  * Map and elevation tiles are cached as they are used (the app also keeps its
  * own IndexedDB copy, which is what survives a cache eviction).
  */
-const VERSION = 'astroscout-v1';
+const VERSION = 'astroscout-v2';
 const SHELL = [
-  './', './index.html', './manifest.webmanifest',
+  './', './index.html', './manifest.webmanifest?v=2',
   './css/app.css',
   './js/app.js', './js/astro.js', './js/catalog.js', './js/planner.js',
   './js/presets.js', './js/render.js', './js/terrain.js', './js/ui.js',
@@ -19,10 +19,12 @@ const TILE_HOSTS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION)
+    .then(c => Promise.allSettled(SHELL.map(url => c.add(url))))
+    .then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k))))
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION && !k.endsWith('-tiles')).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {
@@ -35,7 +37,7 @@ self.addEventListener('fetch', e => {
       const net = fetch(e.request).then(res => {
         if (res && res.ok) caches.open(VERSION).then(c => c.put(e.request, res.clone()));
         return res;
-      }).catch(() => hit);
+      }).catch(() => hit || new Response('Temporarily offline', { status: 503 }));
       return hit || net;
     }));
     return;

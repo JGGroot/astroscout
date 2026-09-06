@@ -1,13 +1,13 @@
 {
-  "name": "AstroScout — Milky Way shot planner",
+  "name": "AstroScout — Explore Earth after dark",
   "short_name": "AstroScout",
   "description": "Real 1:1 terrain under an astronomically accurate sky, for planning Milky Way landscape photography.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#07080c",
-  "theme_color": "#07080c",
+  "background_color": "#06100e",
+  "theme_color": "#06100e",
   "categories": ["photo", "utilities", "travel"],
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

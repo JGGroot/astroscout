@@ -99,9 +99,9 @@ try {
   const transitionCheck = await send('Runtime.evaluate', {
     expression: `(() => {
       const a = window.app, states = [];
-      a.setViewMode('orbit'); states.push([a.mode, a.aerialView, document.querySelector('#btnAerial').classList.contains('on')]);
-      a.setViewMode('pov'); states.push([a.mode, document.querySelector('#btnPOV').classList.contains('on')]);
-      a.setViewMode('map'); states.push([a.mode, a.aerialView, document.querySelector('#btnMap').classList.contains('on')]);
+      document.querySelector('#btnAerial').click(); states.push([a.mode, a.aerialView, document.querySelector('#btnAerial').classList.contains('on')]);
+      document.querySelector('#btnPOV').click(); states.push([a.mode, document.querySelector('#btnPOV').classList.contains('on')]);
+      document.querySelector('#btnMap').click(); states.push([a.mode, a.aerialView, document.querySelector('#btnMap').classList.contains('on')]);
       return states;
     })()`,
     returnByValue: true
@@ -110,6 +110,26 @@ try {
   const expected = JSON.stringify([['aerial', 'orbit', true], ['eye', true], ['aerial', 'map', true]]);
   if (JSON.stringify(transitions) !== expected) throw new Error(`View transition failure: ${JSON.stringify(transitions)}`);
   diagnostics.transitions = 'map → orbit → POV → map';
+
+  const fallbackCheck = await send('Runtime.evaluate', {
+    expression: `(() => {
+      const a = window.app;
+      const saved = { mesh: a.mesh, dem: a.dem, fallback: a.terrainFallback };
+      a.mode = 'eye'; a.mesh = null; a.dem = null; a.terrainFallback = false; a._loading = true;
+      document.querySelector('#btnAerial').click();
+      const explore = [a.mode, a.aerialView, !!a.mesh, a.terrainFallback];
+      document.querySelector('#btnMap').click();
+      const map = [a.mode, a.aerialView, !!a.mesh, a.terrainFallback];
+      a.mesh = saved.mesh; a.dem = saved.dem; a.terrainFallback = saved.fallback; a._loading = false;
+      a.renderer.setTerrain(saved.mesh); a.setViewMode('map');
+      return { explore, map };
+    })()`,
+    returnByValue: true
+  });
+  const fallback = fallbackCheck.result.value;
+  if (JSON.stringify(fallback) !== JSON.stringify({ explore: ['aerial', 'orbit', true, true], map: ['aerial', 'map', true, true] }))
+    throw new Error(`Offline navigation failure: ${JSON.stringify(fallback)}`);
+  diagnostics.offlineNavigation = 'Explore and Map respond before elevation is available';
 
   await send('Runtime.evaluate', {
     expression: `(() => { app.setViewMode('pov'); app.view.az = 148.8; app.view.alt = 1.5; app.S.contextZoom = 1; app.invalidate(); })()`

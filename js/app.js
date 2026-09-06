@@ -339,9 +339,11 @@ class App {
       }
       if (!dem.levels.some(l => l.tiles.size)) {
         this.ui.toast(window.__ASTROSCOUT_PREVIEW
-          ? 'This hosted preview is sandboxed and cannot fetch map tiles. Everything else — sky, timeline, planner — works here; run the deployed build for terrain.'
-          : 'No elevation tiles could be fetched. Check the connection, or pick another source under Sky & terrain.', 7000);
-        this._loading = false; return;
+          ? 'Map tiles are unavailable in this preview — using an offline surface so every view still works.'
+          : 'Elevation is temporarily unavailable — using an offline surface while you explore.', 6000);
+        this.activateFallbackTerrain();
+        if (S.useImagery) await this.loadImagery();
+        return;
       }
       const azSteps = { fast: 512, balanced: 768, max: 1024 }[S.quality];
       const rMax = { fast: 100000, balanced: 160000, max: 240000 }[S.quality];
@@ -350,7 +352,7 @@ class App {
         azSteps, rMax, eyeHeight: S.eyeHeight,
         drMax: S.quality === 'max' ? 700 : 900
       });
-      this.dem = dem; this.mesh = mesh;
+      this.dem = dem; this.mesh = mesh; this.terrainFallback = false;
       this.renderer.setTerrain(mesh);
       let tiles = 0; dem.levels.forEach(l => tiles += l.tiles.size);
       S.terrainLoaded = true; S.autoTerrain = true;
@@ -364,9 +366,32 @@ class App {
       this.ui.toast(`Terrain loaded — ${tiles} tiles, horizon at ${(rMax / 1000)} km`, 3000);
       if (S.useImagery) await this.loadImagery();
     } catch (e) {
-      this.ui.toast('Terrain failed: ' + e.message, 5000);
+      this.activateFallbackTerrain();
+      this.ui.toast('Terrain connection failed — Explore and Map are using an offline surface.', 5000);
     }
-    this._loading = false;
+    finally {
+      this._loading = false;
+      const requested = this.pendingView;
+      this.pendingView = null;
+      if (requested && this.mesh) this.setViewMode(requested);
+      this.invalidate();
+    }
+  }
+
+  /** A neutral curved surface keeps camera navigation available when a tile
+   *  host is slow or offline. It is clearly labelled and is replaced in place
+   *  as soon as real elevation arrives. */
+  activateFallbackTerrain() {
+    if (this.mesh && !this.terrainFallback) return;
+    const dem = new DemPyramid();
+    dem.lat = this.S.lat; dem.lon = this.S.lon; dem.levels = [];
+    const mesh = buildMesh(dem, this.S.lat, this.S.lon, {
+      azSteps: 256, rMax: 50000, eyeHeight: this.S.eyeHeight, drMax: 1200
+    });
+    this.dem = dem; this.mesh = mesh; this.terrainFallback = true;
+    this.renderer.setTerrain(mesh);
+    this.S.terrainLoaded = false;
+    this.S.terrainInfo = 'Offline navigation surface — elevation not loaded';
     this.invalidate();
   }
 
@@ -523,13 +548,15 @@ class App {
    *  orbital camera, or a near-vertical map. Keep these explicit in the UI. */
   setViewMode(view) {
     if (view === 'pov') {
+      this.pendingView = null;
       this.toggleAerial(false);
       return;
     }
     if (!this.mesh) {
-      this.ui.toast('Terrain is still loading — orbit will unlock when the ground is ready');
+      this.pendingView = view;
+      this.activateFallbackTerrain();
+      this.ui.toast(`Opening ${view === 'map' ? 'Map' : 'Explore'} — detailed terrain is still streaming`);
       if (!this._loading) this.loadTerrain();
-      return;
     }
     this.aerialView = view === 'map' ? 'map' : 'orbit';
     if (this.mode !== 'aerial') this.toggleAerial(true);
@@ -550,7 +577,10 @@ class App {
     const view = this.mode === 'aerial' ? this.aerialView : 'pov';
     const stage = document.getElementById('stage');
     if (stage) stage.dataset.view = view;
-    document.querySelectorAll('.view-mode').forEach(b => b.classList.toggle('on', b.dataset.view === view));
+    document.querySelectorAll('.view-mode').forEach(b => {
+      b.classList.toggle('on', b.dataset.view === view);
+      b.classList.toggle('pending', !!this.pendingView && b.dataset.view === this.pendingView);
+    });
     const label = document.getElementById('modeReadout');
     if (label) label.textContent = view === 'map' ? 'TERRAIN MAP' : view === 'orbit' ? 'FREE ORBIT' : 'GROUND POV';
     const hint = document.getElementById('sceneHintText');
@@ -921,13 +951,15 @@ class App {
     document.getElementById('cdate').textContent =
       d.toUTCString().slice(0, 16) + ` · UTC${S.tzMin >= 0 ? '+' : ''}${(S.tzMin / 60).toFixed(1).replace('.0', '')}`;
     document.getElementById('placeName').textContent = S.name;
-    document.getElementById('placeSub').textContent =
-      `${S.lat.toFixed(4)}, ${S.lon.toFixed(4)}` + (this.mesh ? ` · ${this.mesh.baseElev.toFixed(0)} m` : ' · no terrain');
+    document.getElementById('placeSub').textContent = `${S.lat.toFixed(4)}, ${S.lon.toFixed(4)}` +
+      (this.terrainFallback ? ' · elevation loading' : this.mesh ? ` · ${this.mesh.baseElev.toFixed(0)} m` : ' · no terrain');
 
     this.syncViewChrome();
     this.syncSatelliteChrome();
     const terrainState = document.getElementById('terrainState');
-    if (terrainState) terrainState.textContent = this.mesh
+    if (terrainState) terrainState.textContent = this.terrainFallback
+      ? 'Offline surface · terrain retry available'
+      : this.mesh
       ? `${(this.mesh.nVerts / 1000).toFixed(0)}K vertices · ${(this.mesh.rMax / 1000).toFixed(0)} km radius`
       : (this._loading ? 'Streaming elevation tiles…' : 'Waiting for terrain');
     const bestWindow = document.getElementById('bestWindow');

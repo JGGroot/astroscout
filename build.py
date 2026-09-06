@@ -99,7 +99,7 @@ def build_deploy():
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AstroScout">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.webmanifest?v=2">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <style>
@@ -113,7 +113,7 @@ def build_deploy():
 </script>
 <script>
 if ('serviceWorker' in navigator) {{
-  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {{}}));
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=2').catch(() => {{}}));
 }}
 </script>
 </body>
@@ -122,11 +122,11 @@ if ('serviceWorker' in navigator) {{
     (d / 'index.html').write_text(page, encoding='utf-8')
 
     manifest = {
-        "name": "AstroScout — Milky Way shot planner",
+        "name": "AstroScout — Explore Earth after dark",
         "short_name": "AstroScout",
         "description": "Real 1:1 terrain under an astronomically accurate sky, for planning Milky Way landscape photography.",
         "start_url": "./index.html", "scope": "./", "display": "standalone",
-        "orientation": "any", "background_color": "#07080c", "theme_color": "#07080c",
+        "orientation": "any", "background_color": "#06100e", "theme_color": "#06100e",
         "categories": ["photo", "utilities", "travel"],
         "icons": [
             {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
@@ -137,15 +137,17 @@ if ('serviceWorker' in navigator) {{
     (d / 'manifest.webmanifest').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
 
     sw = '''/* sw.js — offline shell plus an opportunistic tile cache. */
-const VERSION = 'astroscout-flat-v1';
-const SHELL = ['./', './index.html', './manifest.webmanifest',
+const VERSION = 'astroscout-flat-v2';
+const SHELL = ['./', './index.html', './manifest.webmanifest?v=2',
   './icon-192.png', './icon-512.png', './icon-maskable.png'];
 const TILE_HOSTS = ['s3.amazonaws.com', 'elevation-tiles-prod.s3.amazonaws.com',
   'services.arcgisonline.com', 'tile.openstreetmap.org',
   'api.mapbox.com', 'api.maptiler.com', 'cdn.jsdelivr.net', 'unpkg.com'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION)
+    .then(c => Promise.allSettled(SHELL.map(url => c.add(url))))
+    .then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -160,7 +162,7 @@ self.addEventListener('fetch', e => {
       const net = fetch(e.request).then(res => {
         if (res && res.ok) caches.open(VERSION).then(c => c.put(e.request, res.clone()));
         return res;
-      }).catch(() => hit);
+      }).catch(() => hit || new Response('Temporarily offline', { status: 503 }));
       return hit || net;
     }));
     return;
