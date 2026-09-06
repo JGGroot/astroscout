@@ -319,8 +319,8 @@ void main(){
   ambient += vec3(0.05,0.06,0.09) * uMoonIllum * moonUp * 0.5;
   ambient *= (0.45 + 0.55*clamp(n.y,0.0,1.0));
 
-  // scouting light: a fixed north-west key so the landscape reads in the dark.
-  // Never used for the eye-level planning view.
+  // inspection light: a fixed north-west key so satellite relief remains
+  // legible while the astronomical sky is dark, including at ground level.
   vec3 scoutDir = normalize(vec3(-0.55, 0.62, -0.55));
   float sc = max(0.0, dot(n, scoutDir));
   lit += vec3(1.0, 0.98, 0.94) * (0.25 + 0.85*sc) * uScoutLight;

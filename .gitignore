@@ -1,4 +1,6 @@
 node_modules/
+test/.edge-*/
+test/.bruncu-browser-profile/
 test/shots/*.png
 !test/shots/02-terrain.png
 !test/shots/05-south.png

@@ -25,7 +25,13 @@ export class UI {
     $('#btnPlay').addEventListener('click', () => { app.togglePlay(); this.refresh(); });
     $('#btnDark').addEventListener('click', () => app.jumpToBest());
     $('#btnAR').addEventListener('click', () => app.toggleOrientation());
-    $('#btnAerial').addEventListener('click', () => app.toggleAerial());
+    $('#btnPOV').addEventListener('click', () => app.setViewMode('pov'));
+    $('#btnAerial').addEventListener('click', () => app.setViewMode('orbit'));
+    $('#btnMap').addEventListener('click', () => app.setViewMode('map'));
+    $('#btnSatellite').addEventListener('click', () => app.toggleSatellite());
+    $('#btnLayers').addEventListener('click', () => this.openSheet('sky'));
+    $('#btnPlanner').addEventListener('click', () => this.openSheet('plan'));
+    $('#btnLocation').addEventListener('click', () => this.openSheet('where'));
     $('#scoutStand').addEventListener('click', () => app.standHere());
     $('#scoutBack').addEventListener('click', () => app.toggleAerial(false));
     $('#btnNorth').addEventListener('click', () => app.lookAtCore());
@@ -366,7 +372,7 @@ export class UI {
     this.slider(b, 'Milky Way strength', 0, 3, 0.05, () => S.mwGain, v => S.mwGain = v, v => v.toFixed(2));
     this.slider(b, 'Star brightness', 0.2, 3, 0.05, () => S.starGain, v => S.starGain = v, v => v.toFixed(2));
     this.slider(b, 'Foreground lift', 0, 0.35, 0.005, () => S.foregroundBoost, v => S.foregroundBoost = v, v => v.toFixed(3));
-    this.slider(b, 'Scout view light', 0, 1, 0.05, () => S.scoutLight, v => { S.scoutLight = v; app.save(); },
+    this.slider(b, 'Terrain inspection light', 0, 1, 0.05, () => S.scoutLight, v => { S.scoutLight = v; app.save(); },
       v => v === 0 ? 'real light only' : (v * 100).toFixed(0) + '%');
     this.slider(b, 'Haze distance', 8000, 200000, 1000, () => S.haze, v => S.haze = v, v => (v / 1000).toFixed(0) + ' km');
     b.appendChild(el('h3', 'sec', 'Overlays'));

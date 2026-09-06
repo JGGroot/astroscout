@@ -20,7 +20,7 @@ const DEFAULTS = {
   lightPol: 0.008, magLimit: 7.3,
   showStars: true, showFigures: true, showGrid: false, showGalactic: false,
   showCorePath: true, showLabels: true, showFrame: true, showTerrain: true,
-  useImagery: false, demSource: 'terrarium', imgSource: 'esri', demKey: '',
+  useImagery: true, autoTerrain: true, demSource: 'terrarium', imgSource: 'esri', demKey: '',
   targetAz: null, azTol: 45, coreMinAlt: 5, sunMax: -18, moonIllumFree: 0.10,
   useTerrainHorizon: true, speed: 600, eyeHeight: 1.6, rMax: 160000, scoutLight: 0.55
 };
@@ -30,6 +30,19 @@ const KEY = 'astroscout.state.v1';
 class App {
   constructor() {
     this.S = Object.assign({}, DEFAULTS, this.load());
+    const query = new URLSearchParams(location.search);
+    if (query.has('lat') && query.has('lon')) {
+      const lat = +query.get('lat'), lon = +query.get('lon');
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        this.S.lat = Math.max(-85, Math.min(85, lat));
+        this.S.lon = ((lon + 540) % 360) - 180;
+        this.S.name = query.get('name') || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+        this.S.autoTerrain = query.get('terrain') !== '0';
+        if (query.get('quality')) this.S.quality = query.get('quality');
+        if (query.has('satellite')) this.S.useImagery = query.get('satellite') !== '0';
+        this.startView = query.get('view');
+      }
+    }
     this.date = new Date();
     this.view = { az: 180, alt: 12, roll: 0, vfovDeg: 60 };
     this.labels = [];
@@ -37,6 +50,7 @@ class App {
     this.playing = false;
     this.dirty = true;
     this.mode = 'eye';
+    this.aerialView = 'orbit';
     this.orbit = { cx: 0, cz: 0, dist: 6000, az: 200, pitch: 38 };
     this.blend = 0;          // 0 = eye level, 1 = aerial
     this.pick = null;
@@ -66,7 +80,12 @@ class App {
     document.getElementById('splash').classList.add('gone');
     setTimeout(() => document.getElementById('splash').remove(), 600);
     // terrain is a network fetch, so it is opt-in on first run but automatic afterwards
-    if (this.S.autoTerrain) this.loadTerrain();
+    this.syncViewChrome();
+    if (this.S.autoTerrain) {
+      const terrainReady = this.loadTerrain().then(() => {
+        if (this.mesh && ['pov', 'orbit', 'map'].includes(this.startView)) this.setViewMode(this.startView);
+      });
+    }
     else this.ui.toast(window.__ASTROSCOUT_PREVIEW
       ? 'Preview build: the sky, timeline and planner are live. Terrain needs the deployed version.'
       : 'Open “Where” to load the terrain for this spot', 5200);
@@ -119,7 +138,15 @@ class App {
   get jd() { return A.julianDay(this.date); }
   setDate(d) { this.date = d; this.checkNight(); this.recompute(); }
   setJD(jd) { this.setDate(A.dateFromJD(jd)); }
-  togglePlay() { this.playing = !this.playing; document.getElementById('btnPlay').textContent = this.playing ? '⏸' : '▶'; }
+  togglePlay() {
+    this.playing = !this.playing;
+    const b = document.getElementById('btnPlay');
+    b.classList.toggle('on', this.playing);
+    b.title = this.playing ? 'Pause time' : 'Animate time';
+    b.innerHTML = this.playing
+      ? '<svg viewBox="0 0 24 24"><path d="M8 6v12M16 6v12"/></svg>'
+      : '<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7V5z"/></svg>';
+  }
 
   localDayKey() {
     const d = new Date(this.date.getTime() + this.S.tzMin * 60000);
@@ -335,7 +362,7 @@ class App {
       this.treeLine = Math.max(200, this.snowLine - 900);
       this.recomputeNight();
       this.ui.toast(`Terrain loaded — ${tiles} tiles, horizon at ${(rMax / 1000)} km`, 3000);
-      if (S.useImagery) this.loadImagery();
+      if (S.useImagery) await this.loadImagery();
     } catch (e) {
       this.ui.toast('Terrain failed: ' + e.message, 5000);
     }
@@ -347,29 +374,51 @@ class App {
    *  A single level either blurs the near ground or costs hundreds of tiles. */
   async loadImagery() {
     const S = this.S;
+    if (this._imageryLoading) return this._imageryLoading;
     if (!S.useImagery) {
       this.renderer.setImagery(null, 'A'); this.renderer.setImagery(null, 'B');
+      this.imageryReady = false;
       this.invalidate(); return;
     }
     const plans = {
-      fast:     [{ z: 11, r: 25000, slot: 'A' }],
-      balanced: [{ z: 11, r: 35000, slot: 'A' }, { z: 14, r: 4000, slot: 'B' }],
-      max:      [{ z: 12, r: 20000, slot: 'A' }, { z: 15, r: 2800, slot: 'B' }]
+      fast:     [{ z: 11, r: 25000, slot: 'A' }, { z: 15, r: 4000, slot: 'B' }],
+      balanced: [{ z: 12, r: 35000, slot: 'A' }, { z: 15, r: 4000, slot: 'B' }],
+      max:      [{ z: 13, r: 20000, slot: 'A' }, { z: 16, r: 2500, slot: 'B' }]
     }[S.quality] || [];
     const src = IMAGERY_SOURCES[S.imgSource] || IMAGERY_SOURCES.esri;
-    this.ui.toast('Fetching imagery…', 9000);
-    try {
+    this.ui.toast('Fetching satellite imagery…', 9000);
+    this.imageryReady = false;
+    this.syncSatelliteChrome();
+    this._imageryLoading = (async () => { try {
+      let visibleTiles = 0;
       for (const step of plans) {
         const img = await buildImagery(src, S.lat, S.lon, step.r, step.z,
           (d, t) => this.ui.progress(d / t));
-        this.renderer.setImagery(img, step.slot);
+        if (img.loaded > 0) {
+          visibleTiles += img.loaded;
+          this.renderer.setImagery(img, step.slot);
+        }
         this.invalidate();
       }
+      if (!visibleTiles) throw new Error('the imagery host returned no visible tiles');
+      this.imageryReady = true;
       this.ui.progress(0);
-      const px = { fast: 53, balanced: 6.6, max: 3.4 }[S.quality];
-      this.ui.toast(`Imagery draped · about ${px} m per pixel in the foreground`, 3000);
-    } catch (e) { this.ui.toast('Imagery failed: ' + e.message, 4000); }
-    this.invalidate();
+      const px = { fast: 3.7, balanced: 3.7, max: 1.8 }[S.quality];
+      this.ui.toast(`Satellite is live · about ${px} m per pixel in the foreground`, 3000);
+      if (this._satelliteRequested) {
+        this._satelliteRequested = false;
+        this.setViewMode('map');
+      }
+    } catch (e) {
+      this.imageryReady = false;
+      this._satelliteRequested = false;
+      this.ui.toast('Satellite unavailable: ' + e.message, 5000);
+    } finally {
+      this._imageryLoading = null;
+      this.syncSatelliteChrome();
+      this.invalidate();
+    } })();
+    await this._imageryLoading;
   }
 
   async upgradeCatalog() {
@@ -391,6 +440,7 @@ class App {
     S.name = name || `${S.lat.toFixed(4)}, ${S.lon.toFixed(4)}`;
     S.terrainLoaded = false; S.terrainInfo = '';
     this.mesh = null; this.dem = null;
+    this.imageryReady = false;
     this.renderer.clearTerrain();
     this.renderer.setImagery(null);
     this.save();
@@ -469,8 +519,87 @@ class App {
 
   invalidate() { this.dirty = true; }
 
+  /** The same terrain can be experienced as a standing viewpoint, a free
+   *  orbital camera, or a near-vertical map. Keep these explicit in the UI. */
+  setViewMode(view) {
+    if (view === 'pov') {
+      this.toggleAerial(false);
+      return;
+    }
+    if (!this.mesh) {
+      this.ui.toast('Terrain is still loading — orbit will unlock when the ground is ready');
+      if (!this._loading) this.loadTerrain();
+      return;
+    }
+    this.aerialView = view === 'map' ? 'map' : 'orbit';
+    if (this.mode !== 'aerial') this.toggleAerial(true);
+    if (this.aerialView === 'map') {
+      this.orbit.pitch = 78;
+      this.orbit.dist = Math.max(6500, Math.min(28000, this.mesh.rMax * 0.09));
+    } else {
+      this.orbit.pitch = Math.min(58, Math.max(24, this.orbit.pitch || 38));
+      this.orbit.dist = Math.max(2500, Math.min(20000, this.orbit.dist));
+    }
+    this.pick = null;
+    this.syncViewChrome();
+    this.ui.closeSheet();
+    this.invalidate();
+  }
+
+  syncViewChrome() {
+    const view = this.mode === 'aerial' ? this.aerialView : 'pov';
+    const stage = document.getElementById('stage');
+    if (stage) stage.dataset.view = view;
+    document.querySelectorAll('.view-mode').forEach(b => b.classList.toggle('on', b.dataset.view === view));
+    const label = document.getElementById('modeReadout');
+    if (label) label.textContent = view === 'map' ? 'TERRAIN MAP' : view === 'orbit' ? 'FREE ORBIT' : 'GROUND POV';
+    const hint = document.getElementById('sceneHintText');
+    if (hint) hint.textContent = view === 'map' ? 'Drag to rotate · scroll to change altitude' : view === 'orbit' ? 'Drag to orbit · scroll to fly' : 'Drag to look · scroll to zoom';
+  }
+
+  syncSatelliteChrome() {
+    const b = document.getElementById('btnSatellite');
+    if (!b) return;
+    b.classList.toggle('on', !!this.imageryReady);
+    b.classList.toggle('loading', !!this._imageryLoading);
+    b.setAttribute('aria-pressed', this.imageryReady ? 'true' : 'false');
+    const label = b.querySelector('span');
+    if (label) label.textContent = this._imageryLoading ? 'Loading' : (this.imageryReady ? 'Satellite on' : 'Satellite');
+    const mapLabel = document.querySelector('#btnMap span');
+    const mapMeta = document.querySelector('#btnMap small');
+    if (mapLabel) mapLabel.textContent = this.imageryReady ? 'Satellite' : 'Terrain';
+    if (mapMeta) mapMeta.textContent = 'MAP';
+  }
+
+  async toggleSatellite() {
+    const S = this.S;
+    if (this._imageryLoading) {
+      this.ui.toast('Satellite imagery is still loading…');
+      return;
+    }
+    const turnOn = !S.useImagery || !this.imageryReady;
+    S.useImagery = turnOn;
+    this.save();
+    if (!turnOn) {
+      this.renderer.setImagery(null, 'A');
+      this.renderer.setImagery(null, 'B');
+      this.imageryReady = false;
+      this.syncSatelliteChrome();
+      this.ui.toast('Satellite layer hidden');
+      this.invalidate();
+      return;
+    }
+    this._satelliteRequested = true;
+    if (!this.mesh) await this.loadTerrain();
+    else await this.loadImagery();
+  }
+
   toggleAerial(on) {
     const want = on === undefined ? this.mode !== 'aerial' : (on ? 'aerial' : 'eye') === 'aerial';
+    if (want === (this.mode === 'aerial')) {
+      this.syncViewChrome();
+      return;
+    }
     if (want && !this.mesh) return this.ui.toast('Load the terrain first — there is nothing to fly over yet');
     if (want) {
       this._eyeAlt = this.view.alt;
@@ -480,6 +609,7 @@ class App {
       this.orbit.dist = Math.max(2500, Math.min(20000, this.mesh.rMax * 0.05));
       this.orbit.pitch = 38;
       this.mode = 'aerial';
+      if (!this.aerialView) this.aerialView = 'orbit';
       this.ui.toast('Scout view — drag to orbit, pinch to zoom, tap the ground to pick a spot');
     } else {
       this.mode = 'eye';
@@ -489,7 +619,7 @@ class App {
       this.renderer.setWorldLine('pickring', null);
       this.renderer.setWorldLine('pickpin', null);
     }
-    document.getElementById('btnAerial').classList.toggle('on', this.mode === 'aerial');
+    this.syncViewChrome();
     this.ui.refresh();
     this.dirty = true;
   }
@@ -768,7 +898,9 @@ class App {
       showStars: S.showStars, showTerrain: S.showTerrain,
       haze: S.haze, foregroundBoost: S.foregroundBoost,
       useImagery: S.useImagery,
-      scoutLight: k * S.scoutLight,
+      // Satellite inspection light keeps the real surface legible even when
+      // the astronomical clock says night. It changes visibility, not terrain.
+      scoutLight: Math.max(k * S.scoutLight, (1 - k) * (this.imageryReady && S.useImagery ? S.scoutLight : 0)),
       snowLine: this.snowLine || 2600, treeLine: this.treeLine || 1800,
       hiddenLines: hidden
     }, this.bodies);
@@ -791,6 +923,20 @@ class App {
     document.getElementById('placeName').textContent = S.name;
     document.getElementById('placeSub').textContent =
       `${S.lat.toFixed(4)}, ${S.lon.toFixed(4)}` + (this.mesh ? ` · ${this.mesh.baseElev.toFixed(0)} m` : ' · no terrain');
+
+    this.syncViewChrome();
+    this.syncSatelliteChrome();
+    const terrainState = document.getElementById('terrainState');
+    if (terrainState) terrainState.textContent = this.mesh
+      ? `${(this.mesh.nVerts / 1000).toFixed(0)}K vertices · ${(this.mesh.rMax / 1000).toFixed(0)} km radius`
+      : (this._loading ? 'Streaming elevation tiles…' : 'Waiting for terrain');
+    const bestWindow = document.getElementById('bestWindow');
+    if (bestWindow && this.night) {
+      const wins = P.shootWindows(this.night, this.constraints());
+      bestWindow.textContent = wins.length
+        ? `${F(wins[0].from)}–${F(wins[0].to)} · ${P.fmtDur(wins[0].minutes)}`
+        : (sum.hasAstroDark ? 'No clear core window' : 'No astronomical dark');
+    }
 
     const chips = [];
     const clear = this.mesh ? horizonAltAt(this.mesh, this.coreAz) : 0;

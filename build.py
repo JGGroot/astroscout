@@ -16,7 +16,7 @@ EXPORT_RE = re.compile(r'^export\s+(?:async\s+)?(?:const|let|var|function|class)
 IMPORT_RE = re.compile(r'^import\s+([\s\S]+?)\s+from\s+[\'"]\./(\w+)\.js[\'"];?', re.M)
 
 def convert(name):
-    src = (ROOT / 'js' / f'{name}.js').read_text()
+    src = (ROOT / 'js' / f'{name}.js').read_text(encoding='utf-8')
     exports = EXPORT_RE.findall(src)
     imports = []
     def sub_import(m):
@@ -46,15 +46,15 @@ def data_uri(path, mime):
     return f'data:{mime};base64,' + base64.b64encode((ROOT / path).read_bytes()).decode()
 
 def build():
-    css = (ROOT / 'css' / 'app.css').read_text()
+    css = (ROOT / 'css' / 'app.css').read_text(encoding='utf-8')
     js = bundle_js()
-    html = (ROOT / 'index.html').read_text()
+    html = (ROOT / 'index.html').read_text(encoding='utf-8')
     body = re.search(r'<body>(.*)</body>', html, re.S).group(1)
     # drop the module script tag and the service-worker registration
     body = re.sub(r'<script.*?</script>', '', body, flags=re.S).strip()
     icon = data_uri('icons/icon-192.png', 'image/png')
 
-    head_extra = f'''<title>AstroScout — Milky Way shot planner</title>
+    head_extra = f'''<title>AstroScout — explore Earth after dark</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#07080c">
 <link rel="icon" href="{icon}">
@@ -66,10 +66,10 @@ def build():
 
     (ROOT / 'dist').mkdir(exist_ok=True)
     (ROOT / 'dist' / 'artifact.html').write_text(
-        inner.replace('<script>\n', '<script>\nwindow.__ASTROSCOUT_PREVIEW = true;\n', 1))
+        inner.replace('<script>\n', '<script>\nwindow.__ASTROSCOUT_PREVIEW = true;\n', 1), encoding='utf-8')
     full = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
             + head_extra + '\n</head>\n<body>\n' + body + '\n<script>\n' + js + '\n</script>\n</body>\n</html>\n')
-    (ROOT / 'dist' / 'astroscout.html').write_text(full)
+    (ROOT / 'dist' / 'astroscout.html').write_text(full, encoding='utf-8')
     print('dist/astroscout.html %.0f KB' % (len(full) / 1024))
     print('dist/artifact.html   %.0f KB' % (len(inner) / 1024))
 
@@ -81,9 +81,9 @@ def build_deploy():
     import shutil
     d = ROOT / 'deploy'
     d.mkdir(exist_ok=True)
-    css = (ROOT / 'css' / 'app.css').read_text()
+    css = (ROOT / 'css' / 'app.css').read_text(encoding='utf-8')
     js = bundle_js()
-    html = (ROOT / 'index.html').read_text()
+    html = (ROOT / 'index.html').read_text(encoding='utf-8')
     body = re.search(r'<body>(.*)</body>', html, re.S).group(1)
     body = re.sub(r'<script.*?</script>', '', body, flags=re.S).strip()
 
@@ -91,7 +91,7 @@ def build_deploy():
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>AstroScout — Milky Way shot planner</title>
+<title>AstroScout — explore Earth after dark</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <meta name="description" content="Real 1:1 terrain under an astronomically accurate sky. Plan Milky Way compositions over mountains.">
 <meta name="theme-color" content="#07080c">
@@ -119,7 +119,7 @@ if ('serviceWorker' in navigator) {{
 </body>
 </html>
 '''
-    (d / 'index.html').write_text(page)
+    (d / 'index.html').write_text(page, encoding='utf-8')
 
     manifest = {
         "name": "AstroScout — Milky Way shot planner",
@@ -134,7 +134,7 @@ if ('serviceWorker' in navigator) {{
             {"src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
         ]
     }
-    (d / 'manifest.webmanifest').write_text(json.dumps(manifest, indent=2))
+    (d / 'manifest.webmanifest').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
 
     sw = '''/* sw.js — offline shell plus an opportunistic tile cache. */
 const VERSION = 'astroscout-flat-v1';
@@ -178,7 +178,7 @@ self.addEventListener('fetch', e => {
   }
 });
 '''
-    (d / 'sw.js').write_text(sw)
+    (d / 'sw.js').write_text(sw, encoding='utf-8')
     for n in ['icon-192.png', 'icon-512.png', 'icon-maskable.png']:
         shutil.copy(ROOT / 'icons' / n, d / n)
     total = sum(f.stat().st_size for f in d.iterdir())

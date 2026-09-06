@@ -168,11 +168,20 @@ async function fetchBytes(url, useCache = true) {
     const hit = await cacheGet(url);
     if (hit) return hit;
   }
-  const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
-  if (!res.ok) throw new Error(`${res.status} ${url}`);
-  const buf = await res.arrayBuffer();
-  if (useCache) cachePut(url, buf);
-  return buf;
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (!res.ok) throw new Error(`${res.status} ${url}`);
+      const buf = await res.arrayBuffer();
+      if (useCache) cachePut(url, buf);
+      return buf;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 180 * (attempt + 1)));
+    }
+  }
+  throw lastError;
 }
 
 /** Fetch and decode one DEM tile into a Float32Array of elevations (metres). */
@@ -190,8 +199,14 @@ export async function fetchDemTile(src, z, x, y, key) {
     const px = drawToData(bmp, size);
     bmp.close && bmp.close();
     const out = new Float32Array(size * size);
-    for (let i = 0, j = 0; i < out.length; i++, j += 4)
+    let valid = 0;
+    for (let i = 0, j = 0; i < out.length; i++, j += 4) {
       out[i] = src.decode(px[j], px[j + 1], px[j + 2]);
+      // Terrarium uses -32768 for missing coverage. Do not let a formally
+      // successful but empty high-zoom tile bury usable coarser terrain.
+      if (Number.isFinite(out[i]) && out[i] > -12000 && out[i] < 10000) valid++;
+    }
+    if (!valid) return null;
     out.size = size;
     memTiles.set(url, out);
     return out;
@@ -292,7 +307,9 @@ export class DemPyramid {
         return tt[sy * S + sx];
       };
       const h00 = at(x0, y0), h10 = at(x0 + 1, y0), h01 = at(x0, y0 + 1), h11 = at(x0 + 1, y0 + 1);
-      return (h00 * (1 - ax) + h10 * ax) * (1 - ay) + (h01 * (1 - ax) + h11 * ax) * ay;
+      const value = (h00 * (1 - ax) + h10 * ax) * (1 - ay) + (h01 * (1 - ax) + h11 * ax) * ay;
+      if (Number.isFinite(value) && value > -12000 && value < 10000) return value;
+      // A no-data pixel in a fine tile should fall through to the next level.
     }
     return 0;
   }
@@ -467,7 +484,7 @@ export async function buildImagery(src, lat, lon, radius, zoom, onProgress, key)
     : Object.assign(document.createElement('canvas'), { width: size, height: size });
   const g = canvas.getContext('2d');
   g.fillStyle = '#1a1c20'; g.fillRect(0, 0, size, size);
-  let done = 0, total = n * n;
+  let done = 0, loaded = 0, total = n * n;
   const jobs = [];
   for (let dy = 0; dy < n; dy++) for (let dx = 0; dx < n; dx++) jobs.push([dx, dy]);
   let i = 0;
@@ -481,6 +498,7 @@ export async function buildImagery(src, lat, lon, radius, zoom, onProgress, key)
         const buf = await fetchBytes(src.url(z, ((tx % nn) + nn) % nn, ty, key));
         const bmp = await createImageBitmap(new Blob([buf]));
         g.drawImage(bmp, dx * S, dy * S, S, S);
+        loaded++;
         bmp.close && bmp.close();
       } catch (e) { /* leave the hole */ }
       done++; onProgress && onProgress(done, total);
@@ -490,7 +508,7 @@ export async function buildImagery(src, lat, lon, radius, zoom, onProgress, key)
   return {
     canvas,
     // mercator tile-space bounds of the composite
-    x0: cx - half, y0: cy - half, n, z, size,
+    x0: cx - half, y0: cy - half, n, z, size, loaded, total,
     lonToU: lonv => (lonToTileX(lonv, z) - (cx - half)) / n,
     latToV: latv => (latToTileY(latv, z) - (cy - half)) / n
   };

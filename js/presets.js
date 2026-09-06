@@ -14,6 +14,7 @@ export const PRESETS = [
   { g: 'Europe', n: 'Reine, Lofoten',          lat: 67.9330, lon: 13.0880 },
   { g: 'Europe', n: 'Kirkjufell, Iceland',     lat: 64.9270, lon: -23.3070 },
   { g: 'Europe', n: 'Mount Teide, Tenerife',   lat: 28.2723, lon: -16.6425 },
+  { g: 'Europe', n: 'Bruncu Spina, Sardinia',  lat: 40.0160, lon:  9.3019 },
   { g: 'Europe', n: 'Cappadocia',              lat: 38.6430, lon: 34.8290 },
   { g: 'USA', n: 'Tunnel View, Yosemite',      lat: 37.7157, lon: -119.6773 },
   { g: 'USA', n: 'Reflection Lakes, Rainier',  lat: 46.7690, lon: -121.7318 },
