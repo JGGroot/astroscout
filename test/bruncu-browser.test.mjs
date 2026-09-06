@@ -75,7 +75,7 @@ try {
     const a = window.app;
     if (!a) return null;
     return {
-      ready: !!a.mesh && !!a.imageryReady && a.mode === 'aerial' && a.aerialView === 'map',
+      ready: !!a.mesh && !a.terrainFallback && !!a.imageryReady && a.mode === 'aerial' && a.aerialView === 'map',
       loading: !!a._loading || !!a._imageryLoading,
       baseElev: a.mesh ? Math.round(a.mesh.baseElev) : null,
       vertices: a.mesh ? a.mesh.nVerts : 0,
