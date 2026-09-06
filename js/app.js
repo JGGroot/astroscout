@@ -43,6 +43,13 @@ class App {
         if (query.has('satellite')) this.S.useImagery = query.get('satellite') !== '0';
       }
     }
+    // v4 makes satellite imagery the default map layer. Migrate older saved
+    // `useImagery: false` state once, while preserving ?satellite=0.
+    if (query.get('satellite') !== '0' && !this.S.imageryDefaultV4) {
+      this.S.useImagery = true;
+      this.S.imageryDefaultV4 = true;
+      this.save();
+    }
     this.date = new Date();
     this.view = { az: 180, alt: 12, roll: 0, vfovDeg: 60 };
     this.labels = [];
@@ -87,6 +94,8 @@ class App {
     setTimeout(() => document.getElementById('splash').remove(), 600);
     // Detailed terrain streams after the immediately interactive map is visible.
     if (this.S.autoTerrain) {
+      // Imagery does not depend on the DEM, so fetch both layers in parallel.
+      if (this.S.useImagery) this.loadImagery();
       this.loadTerrain();
     }
     else this.ui.toast(window.__ASTROSCOUT_PREVIEW
@@ -345,7 +354,7 @@ class App {
           ? 'Map tiles are unavailable in this preview — using an offline surface so every view still works.'
           : 'Elevation is temporarily unavailable — using an offline surface while you explore.', 6000);
         this.activateFallbackTerrain();
-        if (S.useImagery) await this.loadImagery();
+        if (S.useImagery && !this.imageryReady) await this.loadImagery();
         return;
       }
       const azSteps = { fast: 512, balanced: 768, max: 1024 }[S.quality];
@@ -367,7 +376,7 @@ class App {
       this.treeLine = Math.max(200, this.snowLine - 900);
       this.recomputeNight();
       this.ui.toast(`Terrain loaded — ${tiles} tiles, horizon at ${(rMax / 1000)} km`, 3000);
-      if (S.useImagery) await this.loadImagery();
+      if (S.useImagery && !this.imageryReady) await this.loadImagery();
     } catch (e) {
       this.activateFallbackTerrain();
       this.ui.toast('Terrain connection failed — Explore and Map are using an offline surface.', 5000);
@@ -446,6 +455,9 @@ class App {
       this.syncSatelliteChrome();
       this.invalidate();
     } })();
+    // Reflect the requested layer immediately instead of looking "off" while
+    // the network is still filling the satellite texture.
+    this.syncSatelliteChrome();
     await this._imageryLoading;
   }
 
@@ -596,9 +608,9 @@ class App {
   syncSatelliteChrome() {
     const b = document.getElementById('btnSatellite');
     if (!b) return;
-    b.classList.toggle('on', !!this.imageryReady);
+    b.classList.toggle('on', !!this.imageryReady || !!this._imageryLoading);
     b.classList.toggle('loading', !!this._imageryLoading);
-    b.setAttribute('aria-pressed', this.imageryReady ? 'true' : 'false');
+    b.setAttribute('aria-pressed', this.S.useImagery ? 'true' : 'false');
     const label = b.querySelector('span');
     if (label) label.textContent = this._imageryLoading ? 'Loading' : (this.imageryReady ? 'Satellite on' : 'Satellite');
     this.syncViewChrome();

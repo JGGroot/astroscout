@@ -15,7 +15,8 @@ const edge = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-const server = createServer(async (req, res) => {
+const LIVE_URL = process.env.ASTROSCOUT_URL || '';
+const server = LIVE_URL ? null : createServer(async (req, res) => {
   try {
     const pathname = decodeURIComponent(new URL(req.url, `http://127.0.0.1:${PORT}`).pathname);
     const file = path.resolve(ROOT, '.' + (pathname === '/' ? '/index.html' : pathname));
@@ -25,12 +26,12 @@ const server = createServer(async (req, res) => {
     res.end(body);
   } catch { res.writeHead(404); res.end('not found'); }
 });
-await new Promise(resolve => server.listen(PORT, '127.0.0.1', resolve));
+if (server) await new Promise(resolve => server.listen(PORT, '127.0.0.1', resolve));
 await rm(profile, { recursive: true, force: true });
 await mkdir(profile, { recursive: true });
 
-// Deliberately omit `view=map`: this verifies that 2D map is the real default.
-const url = `http://127.0.0.1:${PORT}/index.html?lat=40.01601&lon=9.30192&name=Bruncu%20Spina,%20Sardinia&quality=fast&satellite=1`;
+// Deliberately omit both view and satellite flags: this verifies the real defaults.
+const url = LIVE_URL || `http://127.0.0.1:${PORT}/index.html?lat=40.01601&lon=9.30192&name=Bruncu%20Spina,%20Sardinia&quality=fast`;
 const browser = spawn(edge, [
   '--headless=new', '--no-sandbox', '--hide-scrollbars', '--enable-unsafe-swiftshader',
   '--use-angle=swiftshader', `--remote-debugging-port=${DEBUG_PORT}`, `--user-data-dir=${profile}`,
@@ -174,7 +175,7 @@ try {
 } finally {
   if (socket?.readyState === WebSocket.OPEN) socket.close();
   browser.kill();
-  server.close();
+  server?.close();
   await Promise.race([
     new Promise(resolve => browser.once('exit', resolve)),
     sleep(2500)
