@@ -32,7 +32,7 @@ export class UI {
     $('#btnLayers').addEventListener('click', () => this.openSheet('sky'));
     $('#btnPlanner').addEventListener('click', () => this.openSheet('plan'));
     $('#btnLocation').addEventListener('click', () => this.openSheet('where'));
-    $('#scoutStand').addEventListener('click', () => app.standHere());
+    $('#scoutStand').addEventListener('click', () => app.viewFromHere());
     $('#scoutBack').addEventListener('click', () => app.toggleAerial(false));
     $('#btnNorth').addEventListener('click', () => app.lookAtCore());
 
@@ -597,6 +597,8 @@ export class UI {
     const aerial = app.mode === 'aerial';
     bar.hidden = !aerial;
     if (aerial) {
+      const mapMode = app.aerialView === 'map';
+      bar.classList.toggle('map-mode', mapMode);
       const t = document.getElementById('scoutTitle'), sub = document.getElementById('scoutSub');
       const stand = document.getElementById('scoutStand');
       if (app.pick) {
@@ -605,8 +607,10 @@ export class UI {
         sub.textContent = `${app.pick.lat.toFixed(5)}, ${app.pick.lon.toFixed(5)} · ${(app.pick.elev - app.mesh.baseElev >= 0 ? '+' : '')}${(app.pick.elev - app.mesh.baseElev).toFixed(0)} m vs here`;
         stand.disabled = false;
       } else {
-        t.textContent = 'Tap the ground to pick a spot';
-        sub.textContent = `orbit ${app.orbit.dist < 1000 ? app.orbit.dist.toFixed(0) + ' m' : (app.orbit.dist / 1000).toFixed(1) + ' km'} · ${P.compass(app.orbit.az)} · ${app.orbit.pitch.toFixed(0)}° down`;
+        t.textContent = mapMode ? 'Tap anywhere to choose your POV' : 'Tap the terrain to choose your POV';
+        sub.textContent = mapMode
+          ? `2D map · ${app.orbit.dist < 1000 ? app.orbit.dist.toFixed(0) + ' m' : (app.orbit.dist / 1000).toFixed(1) + ' km'} altitude · drag to pan`
+          : `3D terrain · ${app.orbit.dist < 1000 ? app.orbit.dist.toFixed(0) + ' m' : (app.orbit.dist / 1000).toFixed(1) + ' km'} · ${P.compass(app.orbit.az)} · ${app.orbit.pitch.toFixed(0)}° down`;
         stand.disabled = true;
       }
       // the standing point, so you never lose yourself in the orbit

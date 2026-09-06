@@ -29,7 +29,8 @@ await new Promise(resolve => server.listen(PORT, '127.0.0.1', resolve));
 await rm(profile, { recursive: true, force: true });
 await mkdir(profile, { recursive: true });
 
-const url = `http://127.0.0.1:${PORT}/index.html?lat=40.01601&lon=9.30192&name=Bruncu%20Spina,%20Sardinia&quality=fast&satellite=1&view=map`;
+// Deliberately omit `view=map`: this verifies that 2D map is the real default.
+const url = `http://127.0.0.1:${PORT}/index.html?lat=40.01601&lon=9.30192&name=Bruncu%20Spina,%20Sardinia&quality=fast&satellite=1`;
 const browser = spawn(edge, [
   '--headless=new', '--no-sandbox', '--hide-scrollbars', '--enable-unsafe-swiftshader',
   '--use-angle=swiftshader', `--remote-debugging-port=${DEBUG_PORT}`, `--user-data-dir=${profile}`,
@@ -95,6 +96,7 @@ try {
   if (!diagnostics?.ready) throw new Error(`Scene did not become ready: ${JSON.stringify(diagnostics)}`);
   if (Math.abs(diagnostics.baseElev - 1828) > 80) throw new Error(`Implausible summit elevation: ${diagnostics.baseElev} m`);
   if (diagnostics.glError !== 0) throw new Error(`WebGL error: ${diagnostics.glError}`);
+  diagnostics.defaultView = '2D top-down map';
 
   const transitionCheck = await send('Runtime.evaluate', {
     expression: `(() => {
@@ -142,6 +144,31 @@ try {
   await sleep(1200);
   const capture = await send('Page.captureScreenshot', { format: 'png', fromSurface: true });
   await writeFile(mapShot, Buffer.from(capture.data, 'base64'));
+
+  const viewpointCheck = await send('Runtime.evaluate', {
+    expression: `(async () => {
+      const a = window.app;
+      a.pickAt(innerWidth * 0.58, innerHeight * 0.43);
+      if (!a.pick) return { picked: false };
+      const selected = { lat: a.pick.lat, lon: a.pick.lon, elev: a.pick.elev };
+      await a.viewFromHere();
+      return {
+        picked: true, selected,
+        mode: a.mode,
+        lat: a.S.lat, lon: a.S.lon,
+        povButton: document.querySelector('#btnPOV').classList.contains('on')
+      };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+  const viewpoint = viewpointCheck.result.value;
+  if (!viewpoint?.picked || viewpoint.mode !== 'eye' || !viewpoint.povButton ||
+      Math.abs(viewpoint.lat - viewpoint.selected.lat) > 1e-7 ||
+      Math.abs(viewpoint.lon - viewpoint.selected.lon) > 1e-7) {
+    throw new Error(`Map-to-POV selection failure: ${JSON.stringify(viewpoint)}`);
+  }
+  diagnostics.mapToPOV = `selected ${viewpoint.selected.lat.toFixed(5)}, ${viewpoint.selected.lon.toFixed(5)} at ${viewpoint.selected.elev.toFixed(0)} m`;
   console.log(JSON.stringify(diagnostics, null, 2));
   console.log(`PASS · Bruncu Spina POV, orbit, and satellite map rendered · ${povShot}`);
 } finally {

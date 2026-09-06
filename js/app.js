@@ -31,6 +31,7 @@ class App {
   constructor() {
     this.S = Object.assign({}, DEFAULTS, this.load());
     const query = new URLSearchParams(location.search);
+    this.startView = query.get('view');
     if (query.has('lat') && query.has('lon')) {
       const lat = +query.get('lat'), lon = +query.get('lon');
       if (Number.isFinite(lat) && Number.isFinite(lon)) {
@@ -40,7 +41,6 @@ class App {
         this.S.autoTerrain = query.get('terrain') !== '0';
         if (query.get('quality')) this.S.quality = query.get('quality');
         if (query.has('satellite')) this.S.useImagery = query.get('satellite') !== '0';
-        this.startView = query.get('view');
       }
     }
     this.date = new Date();
@@ -76,15 +76,18 @@ class App {
     if (!this.S.tzMinSet) { this.S.tzMin = -new Date().getTimezoneOffset(); this.S.tzMinSet = true; }
     this.recomputeNight();
     this.recompute();
+    // The app opens as a usable map even before remote elevation tiles arrive.
+    // Detailed terrain replaces this lightweight curved surface in-place.
+    this.activateFallbackTerrain();
+    this._initializingView = true;
+    this.setViewMode(['pov', 'orbit', 'map'].includes(this.startView) ? this.startView : 'map');
+    this._initializingView = false;
     this.loop();
     document.getElementById('splash').classList.add('gone');
     setTimeout(() => document.getElementById('splash').remove(), 600);
-    // terrain is a network fetch, so it is opt-in on first run but automatic afterwards
-    this.syncViewChrome();
+    // Detailed terrain streams after the immediately interactive map is visible.
     if (this.S.autoTerrain) {
-      const terrainReady = this.loadTerrain().then(() => {
-        if (this.mesh && ['pov', 'orbit', 'map'].includes(this.startView)) this.setViewMode(this.startView);
-      });
+      this.loadTerrain();
     }
     else this.ui.toast(window.__ASTROSCOUT_PREVIEW
       ? 'Preview build: the sky, timeline and planner are live. Terrain needs the deployed version.'
@@ -561,13 +564,14 @@ class App {
     this.aerialView = view === 'map' ? 'map' : 'orbit';
     if (this.mode !== 'aerial') this.toggleAerial(true);
     if (this.aerialView === 'map') {
-      this.orbit.pitch = 78;
+      // Near-vertical reads as a conventional 2D map while retaining the
+      // textured terrain mesh shared with 3D and ground POV.
+      this.orbit.pitch = 90;
       this.orbit.dist = Math.max(6500, Math.min(28000, this.mesh.rMax * 0.09));
     } else {
       this.orbit.pitch = Math.min(58, Math.max(24, this.orbit.pitch || 38));
       this.orbit.dist = Math.max(2500, Math.min(20000, this.orbit.dist));
     }
-    this.pick = null;
     this.syncViewChrome();
     this.ui.closeSheet();
     this.invalidate();
@@ -582,9 +586,11 @@ class App {
       b.classList.toggle('pending', !!this.pendingView && b.dataset.view === this.pendingView);
     });
     const label = document.getElementById('modeReadout');
-    if (label) label.textContent = view === 'map' ? 'TERRAIN MAP' : view === 'orbit' ? 'FREE ORBIT' : 'GROUND POV';
+    if (label) label.textContent = view === 'map'
+      ? (this.imageryReady ? '2D SATELLITE MAP' : '2D TOPOGRAPHIC MAP')
+      : view === 'orbit' ? '3D TERRAIN' : 'GROUND POV';
     const hint = document.getElementById('sceneHintText');
-    if (hint) hint.textContent = view === 'map' ? 'Drag to rotate · scroll to change altitude' : view === 'orbit' ? 'Drag to orbit · scroll to fly' : 'Drag to look · scroll to zoom';
+    if (hint) hint.textContent = view === 'map' ? 'Drag to pan · scroll to zoom · tap to choose a POV' : view === 'orbit' ? 'Drag to orbit · scroll to fly · tap to choose a POV' : 'Drag to look · scroll to zoom';
   }
 
   syncSatelliteChrome() {
@@ -595,10 +601,7 @@ class App {
     b.setAttribute('aria-pressed', this.imageryReady ? 'true' : 'false');
     const label = b.querySelector('span');
     if (label) label.textContent = this._imageryLoading ? 'Loading' : (this.imageryReady ? 'Satellite on' : 'Satellite');
-    const mapLabel = document.querySelector('#btnMap span');
-    const mapMeta = document.querySelector('#btnMap small');
-    if (mapLabel) mapLabel.textContent = this.imageryReady ? 'Satellite' : 'Terrain';
-    if (mapMeta) mapMeta.textContent = 'MAP';
+    this.syncViewChrome();
   }
 
   async toggleSatellite() {
@@ -640,7 +643,9 @@ class App {
       this.orbit.pitch = 38;
       this.mode = 'aerial';
       if (!this.aerialView) this.aerialView = 'orbit';
-      this.ui.toast('Scout view — drag to orbit, pinch to zoom, tap the ground to pick a spot');
+      if (!this._initializingView) this.ui.toast(this.aerialView === 'map'
+        ? '2D map — drag to pan, then tap anywhere to choose a POV'
+        : '3D terrain — drag to orbit, then tap the ground to choose a POV');
     } else {
       this.mode = 'eye';
       this.view.az = this.orbit.az;
@@ -730,6 +735,21 @@ class App {
     this.ui.refresh();
   }
 
+  /** Street-view-style handoff from the selected map point to eye level. */
+  async viewFromHere() {
+    if (!this.pick) return;
+    const heading = this.orbit.az;
+    const selected = { lat: this.pick.lat, lon: this.pick.lon };
+    await this.standHere();
+    this.toggleAerial(false);
+    this.view.az = heading;
+    this.view.alt = 5;
+    this.S.contextZoom = 1;
+    this.syncViewChrome();
+    this.invalidate();
+    this.ui.toast(`POV at ${selected.lat.toFixed(5)}, ${selected.lon.toFixed(5)}`);
+  }
+
   /** Ground bearings from the standing point: where the core is now, and the
    *  foreground direction you locked in. Only rebuilt when they actually move. */
   updateGroundLines() {
@@ -787,7 +807,7 @@ class App {
     const pts = new Map();
     let lastDist = 0;
     stage.addEventListener('pointerdown', e => {
-      if (e.target.closest('#dock,#sheet,#top')) return;
+      if (e.target.closest('#dock,#sheet,#top,#viewSwitcher,#toolrail,#scoutbar')) return;
       pts.set(e.pointerId, e); stage.setPointerCapture(e.pointerId);
       this._moved = false; this._downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
     });
@@ -798,8 +818,25 @@ class App {
       const dx = e.clientX - prev.clientX, dy = e.clientY - prev.clientY;
       if (Math.abs(dx) + Math.abs(dy) > 3) this._moved = true;
       if (pts.size === 1 && this.mode === 'aerial') {
-        this.orbit.az = ((this.orbit.az - dx * 0.35) % 360 + 360) % 360;
-        this.orbit.pitch = Math.max(8, Math.min(88, this.orbit.pitch + dy * 0.25));
+        if (this.aerialView === 'map') {
+          // Conventional map pan: the terrain follows the pointer without
+          // changing north/heading or tilting out of the 2D view.
+          const h = Math.max(1, this.renderer.h / this.dpr);
+          const metresPerPx = 2 * this.orbit.dist * Math.tan(this.view.vfovDeg * A.DEG / 2) / h;
+          const a = this.orbit.az * A.DEG;
+          this.orbit.cx += (-dx * Math.cos(a) + dy * Math.sin(a)) * metresPerPx;
+          this.orbit.cz += (-dx * Math.sin(a) - dy * Math.cos(a)) * metresPerPx;
+          const limit = this.mesh ? this.mesh.rMax * 0.68 : 30000;
+          const d = Math.hypot(this.orbit.cx, this.orbit.cz);
+          if (d > limit) {
+            this.orbit.cx *= limit / d;
+            this.orbit.cz *= limit / d;
+          }
+          this.orbit.pitch = 90;
+        } else {
+          this.orbit.az = ((this.orbit.az - dx * 0.35) % 360 + 360) % 360;
+          this.orbit.pitch = Math.max(8, Math.min(88, this.orbit.pitch + dy * 0.25));
+        }
         this.dirty = true;
       } else if (pts.size === 1) {
         const degPerPx = this.view.vfovDeg / (this.renderer.h / this.dpr);

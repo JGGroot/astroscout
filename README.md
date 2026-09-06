@@ -32,13 +32,13 @@ proper darkness* — and then shows you the frame.
 - **Camera framing.** Pick sensor and focal length and the view is that lens,
   with the frame drawn inside a wider context view. NPF shutter limit, 500-rule
   comparison, suggested ISO, frames needed for a stack.
-- **Scout view.** ⛰ pulls the camera off the ground and orbits the terrain with
-  the satellite drape on it, the way you would study a route on a map. The
+- **Map and terrain explorer.** Opens in a top-down 2D satellite map, with a
+  one-tap toggle into fully relief-shaded 3D terrain. The
   core's bearing is drawn along the ground from where you stand, so you can see
   which ridge it will sit over. Tap anywhere to read that point's elevation and
-  distance, then **Stand here** to move — the mesh rebuilds in about 80 ms from
+  distance, then **View POV** to move — the mesh rebuilds in about 80 ms from
   tiles already in hand, and the planner's windows recompute against the new
-  skyline. Drag orbits, pinch zooms, **Eye level** drops you back into the lens.
+  skyline. Drag pans the 2D map; in 3D it orbits; pinch zooms in either view.
 - **Field ready.** Installs to the home screen, works offline on cached tiles,
   and follows the device compass so you can hold the tablet up at the spot.
 
