@@ -86,7 +86,18 @@ export class UI {
   toggle(parent, label, get, set) {
     const r = el('div', 'row'); r.appendChild(el('label', null, label));
     const sw = el('div', 'switch' + (get() ? ' on' : ''));
-    sw.addEventListener('click', () => { set(!get()); sw.classList.toggle('on', get()); this.app.invalidate(); });
+    sw.setAttribute('role', 'switch'); sw.setAttribute('aria-label', label); sw.tabIndex = 0;
+    const flip = () => {
+      set(!get()); sw.classList.toggle('on', get());
+      sw.setAttribute('aria-checked', get() ? 'true' : 'false');
+      this.app.invalidate();
+    };
+    sw.setAttribute('aria-checked', get() ? 'true' : 'false');
+    sw.addEventListener('click', flip);
+    sw.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault(); flip();
+    });
     r.appendChild(sw); parent.appendChild(r); return sw;
   }
   slider(parent, label, min, max, step, get, set, fmt = v => v.toFixed(2)) {
@@ -100,27 +111,45 @@ export class UI {
 
   panelWhere(b) {
     const app = this.app, S = app.S;
-    const search = el('input'); search.type = 'search'; search.placeholder = 'Search a place…';
+    const searchbar = el('div', 'searchbar');
+    const search = el('input'); search.type = 'search'; search.placeholder = 'Peaks, viewpoints, cafés, addresses…';
+    search.autocomplete = 'off'; search.setAttribute('aria-label', 'Search places and points of interest');
+    const searchBtn = el('button', 'btn primary', 'Search');
+    searchbar.append(search, searchBtn);
     const sr = el('ul', 'list'); sr.style.maxHeight = '190px'; sr.style.overflowY = 'auto';
-    let timer;
-    search.addEventListener('input', () => {
-      clearTimeout(timer);
+    const runSearch = async () => {
       const q = search.value.trim();
-      if (q.length < 3) { sr.innerHTML = ''; return; }
-      timer = setTimeout(async () => {
-        sr.innerHTML = '<li class="n">searching…</li>';
-        const hits = await app.geocode(q);
-        sr.innerHTML = '';
-        if (!hits.length) { sr.innerHTML = '<li class="n">no results (you can paste coordinates below)</li>'; return; }
-        for (const h of hits) {
-          const li = el('li'); li.appendChild(el('div', 'n', h.name));
-          li.appendChild(el('div', 'm', h.lat.toFixed(3) + ', ' + h.lon.toFixed(3)));
-          li.addEventListener('click', () => { app.setLocation(h.lat, h.lon, h.name); this.renderSheet(); });
-          sr.appendChild(li);
-        }
-      }, 450);
-    });
-    b.appendChild(search); b.appendChild(sr);
+      if (q.length < 2) { this.toast('Enter at least two characters'); search.focus(); return; }
+      searchBtn.disabled = true; searchBtn.textContent = 'Searching…';
+      sr.innerHTML = '<li class="search-state">Searching OpenStreetMap…</li>';
+      const hits = await app.geocode(q);
+      searchBtn.disabled = false; searchBtn.textContent = 'Search'; sr.innerHTML = '';
+      if (!hits.length) { sr.innerHTML = '<li class="search-state">No matches. Try a POI type, full address, or coordinates.</li>'; return; }
+      for (const h of hits) {
+        const li = el('li', 'search-result');
+        const copy = el('div', 'result-copy');
+        copy.appendChild(el('div', 'n', h.name));
+        copy.appendChild(el('div', 'result-detail', h.detail || `${h.lat.toFixed(4)}, ${h.lon.toFixed(4)}`));
+        li.appendChild(copy);
+        const meta = el('div', 'result-meta');
+        meta.appendChild(el('span', 'result-kind', (h.kind || 'place').replaceAll('_', ' ')));
+        meta.appendChild(el('span', 'result-coords', `${h.lat.toFixed(3)}, ${h.lon.toFixed(3)}`));
+        li.appendChild(meta); li.tabIndex = 0;
+        const choose = () => { app.setLocation(h.lat, h.lon, h.name); this.renderSheet(); };
+        li.addEventListener('click', choose);
+        li.addEventListener('keydown', e => { if (e.key === 'Enter') choose(); });
+        sr.appendChild(li);
+      }
+    };
+    searchBtn.addEventListener('click', runSearch);
+    search.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
+    b.appendChild(searchbar); b.appendChild(sr);
+    const searchNote = el('p', 'hint search-note');
+    searchNote.append('Searches places and POIs via ');
+    const osmLink = el('a', null, 'OpenStreetMap');
+    osmLink.href = 'https://www.openstreetmap.org/copyright'; osmLink.target = '_blank'; osmLink.rel = 'noopener';
+    searchNote.append(osmLink, '. Results are biased toward the current map area; coordinates also work.');
+    b.appendChild(searchNote);
 
     const cr = el('div', 'grid2'); cr.style.marginTop = '8px';
     const la = el('input'); la.type = 'number'; la.step = '0.00001'; la.value = S.lat.toFixed(5);
@@ -376,6 +405,8 @@ export class UI {
       v => v === 0 ? 'real light only' : (v * 100).toFixed(0) + '%');
     this.slider(b, 'Haze distance', 8000, 200000, 1000, () => S.haze, v => S.haze = v, v => (v / 1000).toFixed(0) + ' km');
     b.appendChild(el('h3', 'sec', 'Overlays'));
+    this.toggle(b, 'Sun disc & label', () => S.showSun, v => { S.showSun = v; app.save(); app.recompute(); });
+    this.toggle(b, 'Moon phase & label', () => S.showMoon, v => { S.showMoon = v; app.save(); app.recompute(); });
     this.toggle(b, 'Stars', () => S.showStars, v => S.showStars = v);
     this.toggle(b, 'Constellation figures', () => S.showFigures, v => S.showFigures = v);
     this.toggle(b, 'Alt-azimuth grid', () => S.showGrid, v => S.showGrid = v);
@@ -384,6 +415,18 @@ export class UI {
     this.toggle(b, 'Labels', () => S.showLabels, v => S.showLabels = v);
     this.toggle(b, 'Lens frame', () => S.showFrame, v => S.showFrame = v);
     this.toggle(b, 'Terrain', () => S.showTerrain, v => S.showTerrain = v);
+    this.toggle(b, 'OpenStreetMap roads', () => S.showRoads, v => app.setOSMLayer('roads', v));
+    this.toggle(b, 'OpenStreetMap places & POIs', () => S.showPOIs, v => app.setOSMLayer('pois', v));
+    b.appendChild(el('p', 'hint', 'Roads follow the terrain surface. Named peaks, viewpoints, shelters, parking and nearby places appear as projected markers. OSM data loads only when either layer is enabled.'));
+    b.appendChild(el('h3', 'sec', 'Interface'));
+    const chrome = (key, value) => { S[key] = value; app.save(); app.syncInterfaceChrome(); };
+    this.toggle(b, 'Core status', () => S.showCoreChip, v => chrome('showCoreChip', v));
+    this.toggle(b, 'Sky darkness status', () => S.showDarknessChip, v => chrome('showDarknessChip', v));
+    this.toggle(b, 'Moon status', () => S.showMoonChip, v => chrome('showMoonChip', v));
+    this.toggle(b, 'Camera status', () => S.showCameraChip, v => chrome('showCameraChip', v));
+    this.toggle(b, 'Night timeline', () => S.showTimeline, v => chrome('showTimeline', v));
+    this.toggle(b, 'View & terrain status', () => S.showSceneStatus, v => chrome('showSceneStatus', v));
+    this.toggle(b, 'Gesture hints', () => S.showHints, v => chrome('showHints', v));
     b.appendChild(el('h3', 'sec', 'Data sources'));
     const ds = el('select');
     for (const k of Object.keys(DEM_SOURCES)) { const o = el('option', null, DEM_SOURCES[k].name); o.value = k; if (k === S.demSource) o.selected = true; ds.appendChild(o); }
@@ -443,7 +486,7 @@ export class UI {
       <p class="hint">${app.attribution}</p>
       <p class="hint">Geocoding by Nominatim / OpenStreetMap. Built as a dependency-free progressive web app: add it to your home screen and it runs offline with whatever tiles you have cached.</p>
       <h3 class="sec">Gestures</h3>
-      <p class="hint">Drag to look around · pinch or scroll to change focal length · drag the timeline to scrub the night · ▶ animates time · ✥ points the view at the galactic core · ◎ uses the device compass.</p>`;
+      <p class="hint">Drag to look around · in 3D, Shift/right-drag or two-finger drag pans · pinch or scroll zooms · drag the timeline to scrub the night · ▶ animates time · ✥ points at the galactic core · ◎ uses the device compass.</p>`;
   }
 
   /* ---------- timeline ---------- */
@@ -589,6 +632,26 @@ export class UI {
         }
         x.font = L.big ? '600 12px -apple-system,system-ui,sans-serif' : '11px -apple-system,system-ui,sans-serif';
         x.fillText(L.text, p[0] + (L.ring ? L.ring + 7 : 7), p[1]);
+      }
+    }
+
+    // OpenStreetMap POIs are real terrain-space points, projected through the
+    // same camera as the mesh. A small collision pass keeps dense areas legible.
+    if (S.showPOIs && app.poiMarkers?.length) {
+      const placed = [];
+      for (const marker of app.poiMarkers) {
+        const p = r.projectPoint(marker.world);
+        if (!p || p[0] < 18 || p[0] > W - 18 || p[1] < 92 || p[1] > H - 155) continue;
+        if (placed.some(q => Math.abs(q[0] - p[0]) < 92 && Math.abs(q[1] - p[1]) < 18)) continue;
+        placed.push(p);
+        const peak = marker.kind === 'peak' || marker.kind === 'viewpoint';
+        x.fillStyle = peak ? 'rgba(214,255,82,.95)' : 'rgba(99,185,255,.95)';
+        x.beginPath(); x.arc(p[0], p[1], peak ? 4 : 3, 0, Math.PI * 2); x.fill();
+        x.strokeStyle = 'rgba(3,9,8,.85)'; x.lineWidth = 3;
+        x.font = '600 10px Inter,system-ui,sans-serif'; x.textAlign = 'left';
+        const name = marker.name.length > 28 ? marker.name.slice(0, 27) + '…' : marker.name;
+        x.strokeText(name, p[0] + 7, p[1] + 3);
+        x.fillStyle = 'rgba(241,247,244,.94)'; x.fillText(name, p[0] + 7, p[1] + 3);
       }
     }
 

@@ -9,7 +9,7 @@ names cannot collide. Emits:
 import re, os, base64, json, pathlib
 
 ROOT = pathlib.Path(__file__).parent
-ORDER = ['astro', 'catalog', 'presets', 'planner', 'terrain', 'render', 'ui']
+ORDER = ['astro', 'catalog', 'presets', 'planner', 'terrain', 'osm', 'render', 'ui']
 ENTRY = 'app'
 
 EXPORT_RE = re.compile(r'^export\s+(?:async\s+)?(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)', re.M)
@@ -99,7 +99,7 @@ def build_deploy():
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AstroScout">
-<link rel="manifest" href="manifest.webmanifest?v=4">
+<link rel="manifest" href="manifest.webmanifest?v=5">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <style>
@@ -113,7 +113,7 @@ def build_deploy():
 </script>
 <script>
 if ('serviceWorker' in navigator) {{
-  addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=4').catch(() => {{}}));
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=5').catch(() => {{}}));
 }}
 </script>
 </body>
@@ -137,8 +137,8 @@ if ('serviceWorker' in navigator) {{
     (d / 'manifest.webmanifest').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
 
     sw = '''/* sw.js — offline shell plus an opportunistic tile cache. */
-const VERSION = 'astroscout-flat-v4';
-const SHELL = ['./', './index.html', './manifest.webmanifest?v=4',
+const VERSION = 'astroscout-flat-v5';
+const SHELL = ['./', './index.html', './manifest.webmanifest?v=5',
   './icon-192.png', './icon-512.png', './icon-maskable.png'];
 const TILE_HOSTS = ['s3.amazonaws.com', 'elevation-tiles-prod.s3.amazonaws.com',
   'services.arcgisonline.com', 'tile.openstreetmap.org',

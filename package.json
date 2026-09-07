@@ -7,7 +7,7 @@
   "scripts": {
     "serve": "python3 -m http.server 8080",
     "build": "python3 build.py",
-    "test": "node test/astro.test.mjs && node test/catalog.test.mjs && node test/planner.test.mjs",
+    "test": "node test/astro.test.mjs && node test/catalog.test.mjs && node test/planner.test.mjs && node test/osm.test.mjs",
     "test:browser": "node test/browser.test.mjs"
   },
   "keywords": ["astrophotography", "milky-way", "terrain", "webgl", "pwa", "photography"],

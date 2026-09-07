@@ -18,6 +18,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none}
 button,input,select,textarea{font:inherit}
 button{color:inherit}
@@ -76,6 +77,7 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;strok
 .chip.moon:before{background:var(--moon)}.chip.warn:before{background:var(--bad)}.chip.good:before{background:var(--ok);box-shadow:0 0 6px var(--ok)}
 
 #sceneHint{position:absolute;z-index:4;left:50%;bottom:222px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;color:rgba(235,244,239,.58);font-size:9px;letter-spacing:.05em;background:rgba(5,12,11,.35);border:1px solid rgba(255,255,255,.07);backdrop-filter:blur(8px);pointer-events:none;transition:opacity .3s}
+#osmAttribution[hidden]{display:none}#osmAttribution{position:absolute;z-index:17;right:18px;bottom:181px;padding:4px 7px;border-radius:6px;background:rgba(4,10,9,.72);border:1px solid var(--line);color:rgba(235,244,239,.72);font-size:8px;text-decoration:none;pointer-events:auto;backdrop-filter:blur(8px)}
 .mouse-icon{width:10px;height:14px;border:1px solid currentColor;border-radius:6px;position:relative}.mouse-icon:after{content:'';position:absolute;width:1px;height:3px;left:4px;top:2px;background:currentColor}
 
 /* Bottom command deck */
@@ -115,12 +117,14 @@ input[type=range]{width:100%;accent-color:var(--accent);background:transparent}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}.btn.wide{width:100%;text-align:center}
 .btnrow{display:flex;gap:8px;flex-wrap:wrap;padding:10px 0}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .pill{padding:8px 9px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.045);text-align:center;font-size:10px;text-transform:capitalize;cursor:pointer}.pill.on{border-color:rgba(214,255,82,.5);background:rgba(214,255,82,.1);color:var(--accent)}
-.switch{margin-left:auto;width:39px;height:23px;border-radius:13px;background:rgba(255,255,255,.14);position:relative;cursor:pointer;flex:0 0 39px;transition:background .15s}.switch::after{content:'';position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s}.switch.on{background:var(--accent)}.switch.on::after{transform:translateX(16px);background:#172000}
+.switch{margin-left:auto;width:39px;height:23px;border-radius:13px;background:rgba(255,255,255,.14);position:relative;cursor:pointer;flex:0 0 39px;transition:background .15s}.switch::after{content:'';position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s}.switch.on{background:var(--accent)}.switch.on::after{transform:translateX(16px);background:#172000}.switch:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.searchbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}.searchbar .btn{min-width:74px}.searchbar .btn:disabled{opacity:.55;cursor:wait}.search-note a{color:var(--accent);text-decoration:none}.search-state{color:var(--dim);font-size:10px;cursor:default!important}.search-result{align-items:flex-start!important}.result-copy{flex:1;min-width:0}.result-detail{margin-top:2px;color:var(--dim2);font-size:9px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.result-meta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;max-width:42%}.result-kind{padding:2px 5px;border-radius:5px;background:rgba(214,255,82,.09);color:var(--accent);font:7px/1.2 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em}.result-coords{color:var(--dim2);font:8px/1.2 'DM Mono',monospace}.search-result:focus-visible{outline:1px solid var(--accent);outline-offset:-1px;background:rgba(214,255,82,.06)}
 h3.sec{margin:17px 0 5px;font:500 8px/1.2 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.15em;color:var(--accent)}.hint{color:var(--dim2);font-size:10px;line-height:1.55;margin:7px 0}.list{margin:0;padding:0;list-style:none}.list li{padding:9px 4px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center;cursor:pointer}.list li:hover{background:rgba(255,255,255,.04)}.list li .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.list li .m{color:var(--dim);font:9px 'DM Mono',monospace;text-align:right}
 table.kv{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}table.kv td{padding:7px 2px;border-bottom:1px solid var(--line);font-size:10px}table.kv td:first-child{color:var(--dim)}table.kv td:last-child{text-align:right}.badge{display:inline-block;padding:3px 7px;border-radius:6px;font-size:8px;font-weight:600;background:rgba(255,255,255,.1);color:var(--dim)}.badge.ok{background:rgba(123,239,170,.14);color:var(--ok)}.badge.bad{background:rgba(255,118,118,.14);color:var(--bad)}.badge.warn{background:rgba(214,255,82,.12);color:var(--accent)}
 
 /* Aerial inspector */
 #scoutbar[hidden]{display:none}#scoutbar{position:absolute;z-index:16;left:50%;bottom:184px;transform:translateX(-50%);width:min(620px,calc(100% - 32px));display:flex;gap:9px;align-items:center;background:rgba(7,15,14,.88);backdrop-filter:blur(20px);border:1px solid var(--line-strong);border-radius:14px;padding:9px 10px;box-shadow:0 16px 40px rgba(0,0,0,.3);pointer-events:auto}
+#stage.status-hidden .timeline-wrap{border-radius:14px}#stage.timeline-hidden .dock-status{border-bottom:1px solid var(--line);border-radius:14px}#stage.timeline-hidden #sheet{bottom:72px;max-height:calc(100% - 150px)}#stage.timeline-hidden #scoutbar{bottom:84px}#stage.timeline-hidden #sceneHint{bottom:90px}#stage.timeline-hidden #osmAttribution{bottom:68px}#stage.timeline-hidden #toast{bottom:92px}
 .scout-target{width:34px;height:34px;border-radius:10px;border:1px solid rgba(214,255,82,.28);display:grid;place-items:center;flex:none}.scout-target span{width:9px;height:9px;border:1px solid var(--accent);border-radius:50%;box-shadow:0 0 9px rgba(214,255,82,.5)}
 #scoutbar .info{flex:1;min-width:0}#scoutbar .info small{display:block;color:var(--accent);font:7px 'DM Mono',monospace;letter-spacing:.13em}#scoutbar .info b{display:block;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#scoutbar .info span{display:block;color:var(--dim);font:9px 'DM Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#scoutbar .btn[disabled]{opacity:.35}
 
@@ -141,8 +145,10 @@ table.kv{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}t
   #dock{padding:0 7px calc(var(--safe-b) + 7px)}.dock-status{height:36px}.dock-status>div{padding:6px 9px}.dock-status small{font-size:6px}.dock-status b{font-size:8px}.mode-readout .status-dot{display:none}.timeline-wrap{height:97px}#timeline{height:60px}#timerow{height:37px}.timeblock{min-width:0;display:block}.now{font-size:15px}.date{font-size:7px}.timeline-label{display:none}
   .tabbar{margin-top:5px;gap:1px;justify-content:space-between}.tab{display:block;flex:1;padding:6px 2px;text-align:center;font-size:8px}.tab-key{display:none}
   #sceneHint{bottom:184px;font-size:8px}#toast{bottom:186px}
+  #osmAttribution{right:8px;bottom:147px;font-size:7px}
   #sheet{left:7px;right:7px;bottom:145px;width:auto;max-height:calc(100% - 230px);border-radius:17px;transform:translateY(calc(100% + 160px))}#sheet.open{transform:translateY(0)}.grabber{display:block;position:absolute;top:6px;left:50%;transform:translateX(-50%);width:34px;height:3px;border-radius:2px;background:var(--line-strong)}#sheet header{padding-top:17px}
   #scoutbar{bottom:151px;padding:7px;width:calc(100% - 14px)}.scout-target{display:none}#scoutbar .info small{display:none}#scoutbar .btn{padding:8px;font-size:9px}#scoutBack{font-size:0!important}#scoutBack:after{content:'POV';font-size:9px}
+  #stage.timeline-hidden #sheet{bottom:56px;max-height:calc(100% - 135px)}#stage.timeline-hidden #scoutbar{bottom:62px}#stage.timeline-hidden #sceneHint{bottom:68px}#stage.timeline-hidden #osmAttribution{bottom:49px}#stage.timeline-hidden #toast{bottom:70px}
 }
 @media (max-height:680px) and (min-width:621px){#dock{padding-bottom:6px}.dock-status{display:none}.timeline-wrap{height:90px}#timeline{height:54px}#sceneHint{display:none}#sheet{bottom:132px;max-height:calc(100% - 210px)}#scoutbar{bottom:145px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -217,11 +223,13 @@ table.kv{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}t
     <span id="sceneHintText">Drag to pan · scroll to zoom · tap to choose a POV</span>
   </div>
 
+  <a id="osmAttribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" hidden>© OpenStreetMap contributors</a>
+
   <div id="dock">
     <div class="dock-status">
       <div class="mode-readout">
         <span class="status-dot"></span>
-        <div><small>LIVE SCENE</small><b id="modeReadout">2D MAP</b></div>
+        <div><b id="modeReadout">2D MAP</b></div>
       </div>
       <div class="best-window">
         <small>BEST WINDOW</small>
@@ -275,7 +283,7 @@ table.kv{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}t
     <div class="info">
       <small>CHOOSE A VIEWPOINT</small>
       <b id="scoutTitle">Tap anywhere to choose your POV</b>
-      <span id="scoutSub">Drag to pan · pinch to zoom</span>
+      <span id="scoutSub">Drag to orbit · Shift/right-drag to pan · scroll to zoom</span>
     </div>
     <button class="btn primary" id="scoutStand" disabled>View POV</button>
     <button class="btn" id="scoutBack">Current POV</button>
@@ -1731,6 +1739,122 @@ async function buildImagery(src, lat, lon, radius, zoom, onProgress, key) {
 return { R_EARTH, K_REFRACTION, R_EFF, DEM_SOURCES, IMAGERY_SOURCES, lonToTileX, latToTileY, tileXToLon, tileYToLat, metresPerPixel, destPoint, haversine, bearing, cacheStats, cacheClear, fetchDemTile, probeSources, DemPyramid, tilePlan, ringRadii, buildMesh, groundYAt, raycastTerrain, horizonAltAt, buildImagery };
 })();
 
+__M['osm'] = (function(){
+
+/* osm.js — small, on-demand OpenStreetMap overlays via Overpass.
+ *
+ * This deliberately requests only the local area currently being inspected.
+ * It does not crawl raster tiles or prefetch regions for offline use. */
+
+// Both are current public global instances listed by the OSM project. The
+// community main instance is intentionally the fallback because it is often
+// overloaded; Private.coffee explicitly permits project use without a quota.
+const ENDPOINTS = [
+  'https://overpass.private.coffee/api/interpreter',
+  'https://overpass-api.de/api/interpreter'
+];
+const ROAD_TYPES = 'motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|unclassified|residential|living_street|service|track';
+const mem = new Map();
+
+function centreOf(element) {
+  if (Number.isFinite(element.lat) && Number.isFinite(element.lon)) return [element.lat, element.lon];
+  if (element.center && Number.isFinite(element.center.lat) && Number.isFinite(element.center.lon)) {
+    return [element.center.lat, element.center.lon];
+  }
+  const g = element.geometry;
+  if (!g || !g.length) return null;
+  let lat = 0, lon = 0, n = 0;
+  for (const p of g) if (Number.isFinite(p.lat) && Number.isFinite(p.lon)) {
+    lat += p.lat; lon += p.lon; n++;
+  }
+  return n ? [lat / n, lon / n] : null;
+}
+
+function poiKind(tags) {
+  if (tags.natural === 'peak') return 'peak';
+  if (tags.tourism === 'viewpoint') return 'viewpoint';
+  if (tags.tourism === 'alpine_hut' || tags.amenity === 'shelter') return 'shelter';
+  if (tags.amenity === 'parking') return 'parking';
+  if (tags.amenity === 'drinking_water') return 'water';
+  if (tags.place) return 'place';
+  if (tags.historic) return 'historic';
+  return tags.tourism || tags.amenity || tags.natural || 'poi';
+}
+
+/** Turn an Overpass response into compact, renderer-friendly features. */
+function parseOSMFeatures(json) {
+  const roads = [], pois = [], seen = new Set();
+  for (const e of json?.elements || []) {
+    const id = `${e.type}/${e.id}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const tags = e.tags || {};
+    if (tags.highway && Array.isArray(e.geometry) && e.geometry.length > 1) {
+      roads.push({
+        id, kind: tags.highway, name: tags.name || tags.ref || '',
+        geometry: e.geometry.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon))
+          .map(p => [p.lat, p.lon])
+      });
+    }
+    if (tags.name && (tags.tourism || tags.amenity || tags.natural || tags.historic || tags.place)) {
+      const c = centreOf(e);
+      if (c) pois.push({ id, name: tags.name, kind: poiKind(tags), lat: c[0], lon: c[1], ele: +(tags.ele || NaN) });
+    }
+  }
+  return { roads, pois };
+}
+
+function query(lat, lon, radius) {
+  return `[out:json][timeout:20];(
+way(around:${radius},${lat},${lon})["highway"~"^(${ROAD_TYPES})$"];
+nwr(around:${radius},${lat},${lon})["name"]["tourism"];
+nwr(around:${radius},${lat},${lon})["name"]["amenity"~"^(parking|shelter|drinking_water|restaurant|cafe)$"];
+nwr(around:${radius},${lat},${lon})["name"]["natural"~"^(peak|saddle|spring|cave_entrance)$"];
+nwr(around:${radius},${lat},${lon})["name"]["historic"];
+nwr(around:${radius},${lat},${lon})["name"]["place"~"^(city|town|village|hamlet|locality)$"];
+);out tags center geom;`;
+}
+
+/** Fetch a bounded local overlay. Results are cached for this session and in
+ * localStorage for 24 hours to be polite to the public Overpass instance. */
+async function fetchOSMFeatures(lat, lon, radius = 8000) {
+  const key = `astroscout.osm.v1:${lat.toFixed(2)}:${lon.toFixed(2)}:${radius}`;
+  if (mem.has(key)) return mem.get(key);
+  try {
+    const cached = JSON.parse(localStorage.getItem(key));
+    if (cached && Date.now() - cached.at < 86400000 && cached.data) {
+      mem.set(key, cached.data); return cached.data;
+    }
+  } catch (e) { /* cache is optional */ }
+
+  let lastError;
+  for (const endpoint of ENDPOINTS) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 20000);
+    try {
+      const url = `${endpoint}?data=${encodeURIComponent(query(lat, lon, radius))}`;
+      const response = await fetch(url, {
+        mode: 'cors', credentials: 'omit', signal: ctl.signal,
+        referrerPolicy: 'strict-origin-when-cross-origin',
+        headers: { Accept: 'application/json' }
+      });
+      if (!response.ok) throw new Error(`Overpass HTTP ${response.status}`);
+      const data = parseOSMFeatures(await response.json());
+      mem.set(key, data);
+      try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), data })); } catch (e) { /* quota */ }
+      return data;
+    } catch (e) {
+      lastError = e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastError || new Error('No Overpass endpoint responded');
+}
+
+return { parseOSMFeatures, fetchOSMFeatures };
+})();
+
 __M['render'] = (function(){
 
 /* render.js — WebGL2 renderer. No libraries.
@@ -2574,7 +2698,18 @@ class UI {
   toggle(parent, label, get, set) {
     const r = el('div', 'row'); r.appendChild(el('label', null, label));
     const sw = el('div', 'switch' + (get() ? ' on' : ''));
-    sw.addEventListener('click', () => { set(!get()); sw.classList.toggle('on', get()); this.app.invalidate(); });
+    sw.setAttribute('role', 'switch'); sw.setAttribute('aria-label', label); sw.tabIndex = 0;
+    const flip = () => {
+      set(!get()); sw.classList.toggle('on', get());
+      sw.setAttribute('aria-checked', get() ? 'true' : 'false');
+      this.app.invalidate();
+    };
+    sw.setAttribute('aria-checked', get() ? 'true' : 'false');
+    sw.addEventListener('click', flip);
+    sw.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault(); flip();
+    });
     r.appendChild(sw); parent.appendChild(r); return sw;
   }
   slider(parent, label, min, max, step, get, set, fmt = v => v.toFixed(2)) {
@@ -2588,27 +2723,45 @@ class UI {
 
   panelWhere(b) {
     const app = this.app, S = app.S;
-    const search = el('input'); search.type = 'search'; search.placeholder = 'Search a place…';
+    const searchbar = el('div', 'searchbar');
+    const search = el('input'); search.type = 'search'; search.placeholder = 'Peaks, viewpoints, cafés, addresses…';
+    search.autocomplete = 'off'; search.setAttribute('aria-label', 'Search places and points of interest');
+    const searchBtn = el('button', 'btn primary', 'Search');
+    searchbar.append(search, searchBtn);
     const sr = el('ul', 'list'); sr.style.maxHeight = '190px'; sr.style.overflowY = 'auto';
-    let timer;
-    search.addEventListener('input', () => {
-      clearTimeout(timer);
+    const runSearch = async () => {
       const q = search.value.trim();
-      if (q.length < 3) { sr.innerHTML = ''; return; }
-      timer = setTimeout(async () => {
-        sr.innerHTML = '<li class="n">searching…</li>';
-        const hits = await app.geocode(q);
-        sr.innerHTML = '';
-        if (!hits.length) { sr.innerHTML = '<li class="n">no results (you can paste coordinates below)</li>'; return; }
-        for (const h of hits) {
-          const li = el('li'); li.appendChild(el('div', 'n', h.name));
-          li.appendChild(el('div', 'm', h.lat.toFixed(3) + ', ' + h.lon.toFixed(3)));
-          li.addEventListener('click', () => { app.setLocation(h.lat, h.lon, h.name); this.renderSheet(); });
-          sr.appendChild(li);
-        }
-      }, 450);
-    });
-    b.appendChild(search); b.appendChild(sr);
+      if (q.length < 2) { this.toast('Enter at least two characters'); search.focus(); return; }
+      searchBtn.disabled = true; searchBtn.textContent = 'Searching…';
+      sr.innerHTML = '<li class="search-state">Searching OpenStreetMap…</li>';
+      const hits = await app.geocode(q);
+      searchBtn.disabled = false; searchBtn.textContent = 'Search'; sr.innerHTML = '';
+      if (!hits.length) { sr.innerHTML = '<li class="search-state">No matches. Try a POI type, full address, or coordinates.</li>'; return; }
+      for (const h of hits) {
+        const li = el('li', 'search-result');
+        const copy = el('div', 'result-copy');
+        copy.appendChild(el('div', 'n', h.name));
+        copy.appendChild(el('div', 'result-detail', h.detail || `${h.lat.toFixed(4)}, ${h.lon.toFixed(4)}`));
+        li.appendChild(copy);
+        const meta = el('div', 'result-meta');
+        meta.appendChild(el('span', 'result-kind', (h.kind || 'place').replaceAll('_', ' ')));
+        meta.appendChild(el('span', 'result-coords', `${h.lat.toFixed(3)}, ${h.lon.toFixed(3)}`));
+        li.appendChild(meta); li.tabIndex = 0;
+        const choose = () => { app.setLocation(h.lat, h.lon, h.name); this.renderSheet(); };
+        li.addEventListener('click', choose);
+        li.addEventListener('keydown', e => { if (e.key === 'Enter') choose(); });
+        sr.appendChild(li);
+      }
+    };
+    searchBtn.addEventListener('click', runSearch);
+    search.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
+    b.appendChild(searchbar); b.appendChild(sr);
+    const searchNote = el('p', 'hint search-note');
+    searchNote.append('Searches places and POIs via ');
+    const osmLink = el('a', null, 'OpenStreetMap');
+    osmLink.href = 'https://www.openstreetmap.org/copyright'; osmLink.target = '_blank'; osmLink.rel = 'noopener';
+    searchNote.append(osmLink, '. Results are biased toward the current map area; coordinates also work.');
+    b.appendChild(searchNote);
 
     const cr = el('div', 'grid2'); cr.style.marginTop = '8px';
     const la = el('input'); la.type = 'number'; la.step = '0.00001'; la.value = S.lat.toFixed(5);
@@ -2864,6 +3017,8 @@ class UI {
       v => v === 0 ? 'real light only' : (v * 100).toFixed(0) + '%');
     this.slider(b, 'Haze distance', 8000, 200000, 1000, () => S.haze, v => S.haze = v, v => (v / 1000).toFixed(0) + ' km');
     b.appendChild(el('h3', 'sec', 'Overlays'));
+    this.toggle(b, 'Sun disc & label', () => S.showSun, v => { S.showSun = v; app.save(); app.recompute(); });
+    this.toggle(b, 'Moon phase & label', () => S.showMoon, v => { S.showMoon = v; app.save(); app.recompute(); });
     this.toggle(b, 'Stars', () => S.showStars, v => S.showStars = v);
     this.toggle(b, 'Constellation figures', () => S.showFigures, v => S.showFigures = v);
     this.toggle(b, 'Alt-azimuth grid', () => S.showGrid, v => S.showGrid = v);
@@ -2872,6 +3027,18 @@ class UI {
     this.toggle(b, 'Labels', () => S.showLabels, v => S.showLabels = v);
     this.toggle(b, 'Lens frame', () => S.showFrame, v => S.showFrame = v);
     this.toggle(b, 'Terrain', () => S.showTerrain, v => S.showTerrain = v);
+    this.toggle(b, 'OpenStreetMap roads', () => S.showRoads, v => app.setOSMLayer('roads', v));
+    this.toggle(b, 'OpenStreetMap places & POIs', () => S.showPOIs, v => app.setOSMLayer('pois', v));
+    b.appendChild(el('p', 'hint', 'Roads follow the terrain surface. Named peaks, viewpoints, shelters, parking and nearby places appear as projected markers. OSM data loads only when either layer is enabled.'));
+    b.appendChild(el('h3', 'sec', 'Interface'));
+    const chrome = (key, value) => { S[key] = value; app.save(); app.syncInterfaceChrome(); };
+    this.toggle(b, 'Core status', () => S.showCoreChip, v => chrome('showCoreChip', v));
+    this.toggle(b, 'Sky darkness status', () => S.showDarknessChip, v => chrome('showDarknessChip', v));
+    this.toggle(b, 'Moon status', () => S.showMoonChip, v => chrome('showMoonChip', v));
+    this.toggle(b, 'Camera status', () => S.showCameraChip, v => chrome('showCameraChip', v));
+    this.toggle(b, 'Night timeline', () => S.showTimeline, v => chrome('showTimeline', v));
+    this.toggle(b, 'View & terrain status', () => S.showSceneStatus, v => chrome('showSceneStatus', v));
+    this.toggle(b, 'Gesture hints', () => S.showHints, v => chrome('showHints', v));
     b.appendChild(el('h3', 'sec', 'Data sources'));
     const ds = el('select');
     for (const k of Object.keys(DEM_SOURCES)) { const o = el('option', null, DEM_SOURCES[k].name); o.value = k; if (k === S.demSource) o.selected = true; ds.appendChild(o); }
@@ -2931,7 +3098,7 @@ class UI {
       <p class="hint">${app.attribution}</p>
       <p class="hint">Geocoding by Nominatim / OpenStreetMap. Built as a dependency-free progressive web app: add it to your home screen and it runs offline with whatever tiles you have cached.</p>
       <h3 class="sec">Gestures</h3>
-      <p class="hint">Drag to look around · pinch or scroll to change focal length · drag the timeline to scrub the night · ▶ animates time · ✥ points the view at the galactic core · ◎ uses the device compass.</p>`;
+      <p class="hint">Drag to look around · in 3D, Shift/right-drag or two-finger drag pans · pinch or scroll zooms · drag the timeline to scrub the night · ▶ animates time · ✥ points at the galactic core · ◎ uses the device compass.</p>`;
   }
 
   /* ---------- timeline ---------- */
@@ -3080,6 +3247,26 @@ class UI {
       }
     }
 
+    // OpenStreetMap POIs are real terrain-space points, projected through the
+    // same camera as the mesh. A small collision pass keeps dense areas legible.
+    if (S.showPOIs && app.poiMarkers?.length) {
+      const placed = [];
+      for (const marker of app.poiMarkers) {
+        const p = r.projectPoint(marker.world);
+        if (!p || p[0] < 18 || p[0] > W - 18 || p[1] < 92 || p[1] > H - 155) continue;
+        if (placed.some(q => Math.abs(q[0] - p[0]) < 92 && Math.abs(q[1] - p[1]) < 18)) continue;
+        placed.push(p);
+        const peak = marker.kind === 'peak' || marker.kind === 'viewpoint';
+        x.fillStyle = peak ? 'rgba(214,255,82,.95)' : 'rgba(99,185,255,.95)';
+        x.beginPath(); x.arc(p[0], p[1], peak ? 4 : 3, 0, Math.PI * 2); x.fill();
+        x.strokeStyle = 'rgba(3,9,8,.85)'; x.lineWidth = 3;
+        x.font = '600 10px Inter,system-ui,sans-serif'; x.textAlign = 'left';
+        const name = marker.name.length > 28 ? marker.name.slice(0, 27) + '…' : marker.name;
+        x.strokeText(name, p[0] + 7, p[1] + 3);
+        x.fillStyle = 'rgba(241,247,244,.94)'; x.fillText(name, p[0] + 7, p[1] + 3);
+      }
+    }
+
     // scout bar
     const bar = document.getElementById('scoutbar');
     const aerial = app.mode === 'aerial';
@@ -3157,12 +3344,14 @@ const { Renderer } = __M['render'];
 const { UI } = __M['ui'];
 const { BRIGHT_STARS, FIGURES, bvToRGB, fillerStars, loadFullCatalog } = __M['catalog'];
 const { SKY_QUALITY } = __M['presets'];
+const { fetchOSMFeatures } = __M['osm'];
 const { 
   DemPyramid, DEM_SOURCES, IMAGERY_SOURCES, tilePlan, buildMesh, horizonAltAt,
   buildImagery, destPoint, haversine, bearing, groundYAt, raycastTerrain
  } = __M['terrain'];
 /* app.js — application state, the render loop, and everything that wires the
  * astronomy to the pixels. */
+
 
 
 
@@ -3180,6 +3369,10 @@ const DEFAULTS = {
   lightPol: 0.008, magLimit: 7.3,
   showStars: true, showFigures: true, showGrid: false, showGalactic: false,
   showCorePath: true, showLabels: true, showFrame: true, showTerrain: true,
+  showRoads: false, showPOIs: false,
+  showSun: true, showMoon: true,
+  showCoreChip: true, showDarknessChip: true, showMoonChip: true, showCameraChip: true,
+  showTimeline: true, showSceneStatus: true, showHints: true,
   useImagery: true, autoTerrain: true, demSource: 'terrarium', imgSource: 'esri', demKey: '',
   targetAz: null, azTol: 45, coreMinAlt: 5, sunMax: -18, moonIllumFree: 0.10,
   useTerrainHorizon: true, speed: 600, eyeHeight: 1.6, rMax: 160000, scoutLight: 0.55
@@ -3221,6 +3414,7 @@ class App {
     this.orbit = { cx: 0, cz: 0, dist: 6000, az: 200, pitch: 38 };
     this.blend = 0;          // 0 = eye level, 1 = aerial
     this.pick = null;
+    this.poiMarkers = [];
     this.attribution = 'Elevation: AWS Terrain Tiles (Mapzen). Star data: Bright Star Catalogue positions, J2000.';
     this.catalogNote = 'Using the built-in bright-star list plus procedural filler. Download the full catalogue for ~9 000 real stars (needs a connection once; then cached).';
   }
@@ -3248,6 +3442,7 @@ class App {
     this.activateFallbackTerrain();
     this._initializingView = true;
     this.setViewMode(['pov', 'orbit', 'map'].includes(this.startView) ? this.startView : 'map');
+    this.syncInterfaceChrome();
     this._initializingView = false;
     this.loop();
     document.getElementById('splash').classList.add('gone');
@@ -3261,6 +3456,7 @@ class App {
     else this.ui.toast(window.__ASTROSCOUT_PREVIEW
       ? 'Preview build: the sky, timeline and planner are live. Terrain needs the deployed version.'
       : 'Open “Where” to load the terrain for this spot', 5200);
+    if (this.S.showRoads || this.S.showPOIs) this.loadOSMOverlays();
   }
 
   /* ---------- static sky geometry ---------- */
@@ -3411,14 +3607,16 @@ class App {
     this.skyBright = Math.min(1, day * 1.0 + ill.fraction * moonUp * 0.35 + S.lightPol * 1.2);
 
     // bodies to draw
-    const bodies = [{
+    const bodies = [];
+    if (S.showSun) bodies.push({
       dir: sunDir, kind: 'sun', angularRadius: sun.angularRadius, color: [1.0, 0.93, 0.75],
       spriteScale: 2.4, minPx: 10
-    }, {
+    });
+    if (S.showMoon) bodies.push({
       dir: moonDir, kind: 'moon', angularRadius: moon.angularRadius, color: [0.93, 0.93, 0.90],
       illum: ill.fraction, limbAngle: this.limbAngle(moonDir, ill.brightLimbPA, H),
       spriteScale: 2.2, minPx: 9
-    }];
+    });
     this.planets = [];
     for (const name of A.PLANET_NAMES) {
       const p = A.planetPosition(name, jde);
@@ -3455,11 +3653,11 @@ class App {
       dir: this.coreDir, text: `CORE  ${this.coreAlt.toFixed(0)}° ${P.compass(this.coreAz)}`,
       color: 'rgba(255,140,66,.95)', ring: 15, cross: true, big: true
     });
-    out.push({
+    if (S.showMoon) out.push({
       dir: this.moonDir, text: `Moon ${(this.ill.fraction * 100).toFixed(0)}%${this.moonAlt < 0 ? ' (down)' : ''}`,
       color: this.moonAlt < 0 ? 'rgba(207,214,230,.42)' : 'rgba(207,214,230,.9)', ring: 9
     });
-    out.push({
+    if (S.showSun) out.push({
       dir: this.sunDir, text: this.sunAlt < 0 ? `Sun ${this.sunAlt.toFixed(0)}°` : 'Sun',
       color: this.sunAlt < 0 ? 'rgba(255,200,120,.45)' : 'rgba(255,200,120,.9)', ring: 9
     });
@@ -3526,6 +3724,7 @@ class App {
       });
       this.dem = dem; this.mesh = mesh; this.terrainFallback = false;
       this.renderer.setTerrain(mesh);
+      this.renderOSMOverlays();
       let tiles = 0; dem.levels.forEach(l => tiles += l.tiles.size);
       S.terrainLoaded = true; S.autoTerrain = true;
       S.terrainInfo = `${tiles} tiles · ${(mesh.nVerts / 1000) | 0}k vertices · ${(rMax / 1000)} km radius · ground ${mesh.baseElev.toFixed(0)} m`;
@@ -3562,6 +3761,7 @@ class App {
     });
     this.dem = dem; this.mesh = mesh; this.terrainFallback = true;
     this.renderer.setTerrain(mesh);
+    this.renderOSMOverlays();
     this.S.terrainLoaded = false;
     this.S.terrainInfo = 'Offline navigation surface — elevation not loaded';
     this.invalidate();
@@ -3621,6 +3821,95 @@ class App {
     await this._imageryLoading;
   }
 
+  /** Enable an independent OpenStreetMap data overlay. Data is requested only
+   * for the local viewport and shared by the Roads and POI layers. */
+  async setOSMLayer(layer, on) {
+    const key = layer === 'roads' ? 'showRoads' : 'showPOIs';
+    this.S[key] = !!on;
+    this.save();
+    this.syncOSMChrome();
+    if (on && !this.osmData) await this.loadOSMOverlays();
+    else this.renderOSMOverlays();
+    this.ui.refresh();
+  }
+
+  syncOSMChrome() {
+    const credit = document.getElementById('osmAttribution');
+    if (credit) credit.hidden = !(this.S.showRoads || this.S.showPOIs);
+  }
+
+  async loadOSMOverlays() {
+    if (this._osmLoading) return this._osmLoading;
+    const key = `${this.S.lat.toFixed(5)},${this.S.lon.toFixed(5)}`;
+    this.ui.toast('Loading local OpenStreetMap roads and places…', 5000);
+    this._osmLoading = (async () => {
+      try {
+        const data = await fetchOSMFeatures(this.S.lat, this.S.lon, 8000);
+        if (`${this.S.lat.toFixed(5)},${this.S.lon.toFixed(5)}` !== key) return;
+        this.osmData = data;
+        this.osmDataKey = key;
+        this.renderOSMOverlays();
+        this.ui.toast(`OpenStreetMap · ${data.roads.length} roads · ${data.pois.length} places`, 3200);
+      } catch (e) {
+        this.ui.toast(`OpenStreetMap unavailable: ${e.name === 'AbortError' ? 'request timed out' : e.message}`, 5000);
+      } finally {
+        this._osmLoading = null;
+        if ((this.S.showRoads || this.S.showPOIs) &&
+            `${this.S.lat.toFixed(5)},${this.S.lon.toFixed(5)}` !== key) this.loadOSMOverlays();
+      }
+    })();
+    return this._osmLoading;
+  }
+
+  /** Re-project geographic OSM data onto the current observer-centred mesh. */
+  renderOSMOverlays() {
+    const r = this.renderer;
+    if (!r) return;
+    r.setWorldLine('osm-roads', null);
+    r.setWorldLine('osm-poi-pins', null);
+    this.poiMarkers = [];
+    this.syncOSMChrome();
+    if (!this.mesh || !this.dem || !this.osmData) { this.invalidate(); return; }
+
+    const point = (lat, lon, lift = 12) => {
+      const d = haversine(this.S.lat, this.S.lon, lat, lon);
+      if (d > Math.min(this.mesh.rMax * 0.8, 18000)) return null;
+      const a = bearing(this.S.lat, this.S.lon, lat, lon) * A.DEG;
+      const x = d * Math.sin(a), z = -d * Math.cos(a);
+      return [x, groundYAt(this.mesh, this.dem, x, z) + lift, z, d];
+    };
+
+    if (this.S.showRoads) {
+      const roadPts = [];
+      for (const road of this.osmData.roads) {
+        for (let i = 1; i < road.geometry.length && roadPts.length < 90000; i++) {
+          const a = point(road.geometry[i - 1][0], road.geometry[i - 1][1]);
+          const b = point(road.geometry[i][0], road.geometry[i][1]);
+          if (a && b) roadPts.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+        }
+      }
+      r.setWorldLine('osm-roads', roadPts, { color: [1.0, 0.76, 0.18, 0.88], mode: 'LINES' });
+    }
+
+    if (this.S.showPOIs) {
+      const pins = [];
+      const candidates = [];
+      for (const poi of this.osmData.pois) {
+        const p = point(poi.lat, poi.lon, 16);
+        if (p) candidates.push({ ...poi, world: p, distance: p[3] });
+      }
+      candidates.sort((a, b) => a.distance - b.distance);
+      this.poiMarkers = candidates.slice(0, 80);
+      for (const poi of this.poiMarkers) {
+        const p = poi.world, h = Math.max(18, Math.min(70, 18 + poi.distance * 0.004));
+        pins.push(p[0], p[1], p[2], p[0], p[1] + h, p[2]);
+        poi.world = [p[0], p[1] + h, p[2]];
+      }
+      r.setWorldLine('osm-poi-pins', pins, { color: [0.38, 0.86, 1.0, 0.92], mode: 'LINES' });
+    }
+    this.invalidate();
+  }
+
   async upgradeCatalog() {
     this.ui.toast('Downloading star catalogue…', 8000);
     const cat = await loadFullCatalog();
@@ -3641,28 +3930,73 @@ class App {
     S.terrainLoaded = false; S.terrainInfo = '';
     this.mesh = null; this.dem = null;
     this.imageryReady = false;
+    this.osmData = null; this.osmDataKey = null; this.poiMarkers = [];
     this.renderer.clearTerrain();
     this.renderer.setImagery(null);
+    this.renderer.setImagery(null, 'B');
+    this.renderer.setWorldLine('osm-roads', null);
+    this.renderer.setWorldLine('osm-poi-pins', null);
     this.save();
     this.recomputeNight(); this.recompute();
     this.ui.refresh();
     if (S.autoTerrain) this.loadTerrain();
+    if (S.showRoads || S.showPOIs) this.loadOSMOverlays();
   }
 
   async geocode(q) {
-    // coordinates typed directly
+    q = q.trim();
     const m = q.match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
     const out = [];
-    if (m) out.push({ name: `${m[1]}, ${m[2]}`, lat: +m[1], lon: +m[2] });
+    if (m) out.push({ name: `${m[1]}, ${m[2]}`, detail: 'Coordinates', kind: 'coordinates', lat: +m[1], lon: +m[2] });
+    if (m) return dedupePlaces(out);
+
+    // Already-loaded OSM POIs are instant and work offline.
+    const needle = q.toLocaleLowerCase();
+    for (const p of this.osmData?.pois || []) {
+      if (!p.name.toLocaleLowerCase().includes(needle)) continue;
+      out.push({ name: p.name, detail: `${p.kind} · nearby OpenStreetMap feature`, kind: p.kind, lat: p.lat, lon: p.lon });
+    }
+    if (q.length < 2) return out;
+
+    const cacheKey = `astroscout.search.v2:${q.toLocaleLowerCase()}:${this.S.lat.toFixed(1)}:${this.S.lon.toFixed(1)}`;
     try {
-      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&q=${encodeURIComponent(q)}`,
-        { headers: { 'Accept': 'application/json' } });
+      const cached = JSON.parse(localStorage.getItem(cacheKey));
+      if (cached && Date.now() - cached.at < 86400000) return dedupePlaces(out.concat(cached.results));
+    } catch (e) { /* optional cache */ }
+
+    try {
+      // Public Nominatim requires user-triggered search (not autocomplete) and
+      // no more than one request per second for the whole application.
+      const wait = Math.max(0, 1050 - (Date.now() - (this._lastGeocodeAt || 0)));
+      if (wait) await new Promise(resolve => setTimeout(resolve, wait));
+      this._lastGeocodeAt = Date.now();
+      const S = this.S, dLat = 0.7, dLon = 0.9;
+      const params = new URLSearchParams({
+        format: 'jsonv2', limit: '12', q,
+        addressdetails: '1', extratags: '1', namedetails: '1',
+        'accept-language': navigator.language || 'en',
+        viewbox: `${S.lon - dLon},${S.lat + dLat},${S.lon + dLon},${S.lat - dLat}`
+      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+      const endpoint = localStorage.getItem('astroscout.nominatimEndpoint') || 'https://nominatim.openstreetmap.org/search';
+      const r = await fetch(`${endpoint}?${params}`,
+        { mode: 'cors', credentials: 'omit', referrerPolicy: 'strict-origin-when-cross-origin',
+          headers: { Accept: 'application/json' }, signal: controller.signal });
+      clearTimeout(timeout);
       if (r.ok) {
         const j = await r.json();
-        for (const h of j) out.push({ name: h.display_name, lat: +h.lat, lon: +h.lon });
+        const results = j.map(h => ({
+          name: h.namedetails?.name || h.display_name.split(',')[0],
+          detail: h.display_name,
+          kind: h.addresstype || h.type || h.category || 'place',
+          lat: +h.lat, lon: +h.lon
+        }));
+        try { localStorage.setItem(cacheKey, JSON.stringify({ at: Date.now(), results })); } catch (e) { /* quota */ }
+        out.push(...results);
       }
     } catch (e) { /* offline: presets and coordinates still work */ }
-    return out;
+    return dedupePlaces(out);
   }
 
   useGPS() {
@@ -3762,7 +4096,23 @@ class App {
       ? (this.imageryReady ? '2D SATELLITE MAP' : '2D TOPOGRAPHIC MAP')
       : view === 'orbit' ? '3D TERRAIN' : 'GROUND POV';
     const hint = document.getElementById('sceneHintText');
-    if (hint) hint.textContent = view === 'map' ? 'Drag to pan · scroll to zoom · tap to choose a POV' : view === 'orbit' ? 'Drag to orbit · scroll to fly · tap to choose a POV' : 'Drag to look · scroll to zoom';
+    if (hint) hint.textContent = view === 'map' ? 'Drag to pan · scroll to zoom · tap to choose a POV' : view === 'orbit' ? 'Drag to orbit · Shift/right-drag or two-finger drag to pan' : 'Drag to look · scroll to zoom';
+  }
+
+  syncInterfaceChrome() {
+    const S = this.S, stage = document.getElementById('stage');
+    const timeline = document.querySelector('.timeline-wrap');
+    const status = document.querySelector('.dock-status');
+    const hint = document.getElementById('sceneHint');
+    if (timeline) timeline.hidden = !S.showTimeline;
+    if (status) status.hidden = !S.showSceneStatus;
+    if (hint) hint.hidden = !S.showHints;
+    if (stage) {
+      stage.classList.toggle('timeline-hidden', !S.showTimeline);
+      stage.classList.toggle('status-hidden', !S.showSceneStatus);
+    }
+    this.updateChips();
+    this.invalidate();
   }
 
   syncSatelliteChrome() {
@@ -3897,6 +4247,7 @@ class App {
     });
     this.mesh = mesh;
     this.renderer.setTerrain(mesh);
+    this.renderOSMOverlays();
     this.pick = null;
     this.renderer.setWorldLine('pickring', null);
     this.renderer.setWorldLine('pickpin', null);
@@ -3977,10 +4328,31 @@ class App {
   bindInput() {
     const stage = document.getElementById('stage');
     const pts = new Map();
+    const panIds = new Set();
     let lastDist = 0;
+    const panAerial = (dx, dy) => {
+      const h = Math.max(1, this.renderer.h / this.dpr);
+      const metresPerPx = 2 * this.orbit.dist * Math.tan(this.view.vfovDeg * A.DEG / 2) / h;
+      const a = this.orbit.az * A.DEG;
+      const vertical = this.aerialView === 'map' ? 1 : 1 / Math.max(0.28, Math.sin(this.orbit.pitch * A.DEG));
+      this.orbit.cx += (-dx * Math.cos(a) + dy * vertical * Math.sin(a)) * metresPerPx;
+      this.orbit.cz += (-dx * Math.sin(a) - dy * vertical * Math.cos(a)) * metresPerPx;
+      const limit = this.mesh ? this.mesh.rMax * 0.68 : 30000;
+      const d = Math.hypot(this.orbit.cx, this.orbit.cz);
+      if (d > limit) {
+        this.orbit.cx *= limit / d;
+        this.orbit.cz *= limit / d;
+      }
+      this.dirty = true;
+    };
     stage.addEventListener('pointerdown', e => {
       if (e.target.closest('#dock,#sheet,#top,#viewSwitcher,#toolrail,#scoutbar')) return;
       pts.set(e.pointerId, e); stage.setPointerCapture(e.pointerId);
+      if (e.button === 1 || e.button === 2 || e.shiftKey) panIds.add(e.pointerId);
+      if (pts.size === 2) {
+        const a = [...pts.values()];
+        lastDist = Math.hypot(a[0].clientX - a[1].clientX, a[0].clientY - a[1].clientY);
+      }
       this._moved = false; this._downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
     });
     stage.addEventListener('pointermove', e => {
@@ -3991,20 +4363,10 @@ class App {
       if (Math.abs(dx) + Math.abs(dy) > 3) this._moved = true;
       if (pts.size === 1 && this.mode === 'aerial') {
         if (this.aerialView === 'map') {
-          // Conventional map pan: the terrain follows the pointer without
-          // changing north/heading or tilting out of the 2D view.
-          const h = Math.max(1, this.renderer.h / this.dpr);
-          const metresPerPx = 2 * this.orbit.dist * Math.tan(this.view.vfovDeg * A.DEG / 2) / h;
-          const a = this.orbit.az * A.DEG;
-          this.orbit.cx += (-dx * Math.cos(a) + dy * Math.sin(a)) * metresPerPx;
-          this.orbit.cz += (-dx * Math.sin(a) - dy * Math.cos(a)) * metresPerPx;
-          const limit = this.mesh ? this.mesh.rMax * 0.68 : 30000;
-          const d = Math.hypot(this.orbit.cx, this.orbit.cz);
-          if (d > limit) {
-            this.orbit.cx *= limit / d;
-            this.orbit.cz *= limit / d;
-          }
+          panAerial(dx, dy);
           this.orbit.pitch = 90;
+        } else if (panIds.has(e.pointerId)) {
+          panAerial(dx, dy);
         } else {
           this.orbit.az = ((this.orbit.az - dx * 0.35) % 360 + 360) % 360;
           this.orbit.pitch = Math.max(8, Math.min(88, this.orbit.pitch + dy * 0.25));
@@ -4018,19 +4380,25 @@ class App {
       } else if (pts.size === 2) {
         const a = [...pts.values()];
         const d = Math.hypot(a[0].clientX - a[1].clientX, a[0].clientY - a[1].clientY);
+        const beforeX = (prev.clientX + a.find(p => p.pointerId !== e.pointerId).clientX) / 2;
+        const beforeY = (prev.clientY + a.find(p => p.pointerId !== e.pointerId).clientY) / 2;
+        const afterX = (a[0].clientX + a[1].clientX) / 2;
+        const afterY = (a[0].clientY + a[1].clientY) / 2;
+        if (this.mode === 'aerial') panAerial(afterX - beforeX, afterY - beforeY);
         if (lastDist) this.zoom(d / lastDist);
         lastDist = d;
       }
     });
     const up = e => {
-      if (!this._moved && this.mode === 'aerial' && this._downAt &&
+      if (!this._moved && !panIds.has(e.pointerId) && this.mode === 'aerial' && this._downAt &&
           performance.now() - this._downAt.t < 600 && pts.has(e.pointerId)) {
         this.pickAt(e.clientX, e.clientY);
       }
-      pts.delete(e.pointerId); if (pts.size < 2) lastDist = 0;
+      pts.delete(e.pointerId); panIds.delete(e.pointerId); if (pts.size < 2) lastDist = 0;
     };
     stage.addEventListener('pointerup', up);
     stage.addEventListener('pointercancel', up);
+    stage.addEventListener('contextmenu', e => { if (this.mode === 'aerial') e.preventDefault(); });
     stage.addEventListener('wheel', e => { e.preventDefault(); this.zoom(e.deltaY > 0 ? 0.92 : 1.087); }, { passive: false });
     window.addEventListener('keydown', e => {
       const k = e.key;
@@ -4181,14 +4549,15 @@ class App {
 
     const chips = [];
     const clear = this.mesh ? horizonAltAt(this.mesh, this.coreAz) : 0;
-    const above = this.coreAlt > clear;
-    chips.push(`<div class="chip core">CORE <b>${this.coreAlt.toFixed(0)}° ${P.compass(this.coreAz)}</b>${this.mesh ? ` · skyline ${clear.toFixed(0)}°` : ''}</div>`);
-    chips.push(`<div class="chip ${this.sunAlt < -18 ? 'good' : this.sunAlt < -12 ? '' : 'warn'}">sun <b>${this.sunAlt.toFixed(0)}°</b> ${this.sunAlt < -18 ? 'astro dark' : this.sunAlt < -12 ? 'nautical' : this.sunAlt < -6 ? 'civil' : this.sunAlt < 0 ? 'twilight' : 'day'}</div>`);
-    chips.push(`<div class="chip moon">moon <b>${(this.ill.fraction * 100).toFixed(0)}%</b> ${this.moonAlt > 0 ? `up ${this.moonAlt.toFixed(0)}°` : 'down'}</div>`);
+    if (S.showCoreChip) chips.push(`<div class="chip core">CORE <b>${this.coreAlt.toFixed(0)}° ${P.compass(this.coreAz)}</b>${this.mesh ? ` · skyline ${clear.toFixed(0)}°` : ''}</div>`);
+    if (S.showDarknessChip) chips.push(`<div class="chip ${this.sunAlt < -18 ? 'good' : this.sunAlt < -12 ? '' : 'warn'}">sun <b>${this.sunAlt.toFixed(0)}°</b> ${this.sunAlt < -18 ? 'astro dark' : this.sunAlt < -12 ? 'nautical' : this.sunAlt < -6 ? 'civil' : this.sunAlt < 0 ? 'twilight' : 'day'}</div>`);
+    if (S.showMoonChip) chips.push(`<div class="chip moon">moon <b>${(this.ill.fraction * 100).toFixed(0)}%</b> ${this.moonAlt > 0 ? `up ${this.moonAlt.toFixed(0)}°` : 'down'}</div>`);
     const e = P.exposureAdvice({ focal: S.focal, fNumber: S.fNumber, sensor: S.sensor, megapixels: S.mp, decl: this.coreDec });
-    chips.push(`<div class="chip">${Math.round(S.focal)}mm f/${S.fNumber.toFixed(1)} · <b>${e.npf.toFixed(0)}s</b> · ISO ${e.suggestedISO}</div>`);
-    if (!sum.hasAstroDark) chips.push(`<div class="chip warn">no astro dark tonight <b>(${sum.darkestSunAlt.toFixed(0)}°)</b></div>`);
-    document.getElementById('chips').innerHTML = chips.join('');
+    if (S.showCameraChip) chips.push(`<div class="chip">${Math.round(S.focal)}mm f/${S.fNumber.toFixed(1)} · <b>${e.npf.toFixed(0)}s</b> · ISO ${e.suggestedISO}</div>`);
+    if (S.showDarknessChip && !sum.hasAstroDark) chips.push(`<div class="chip warn">no astro dark tonight <b>(${sum.darkestSunAlt.toFixed(0)}°)</b></div>`);
+    const host = document.getElementById('chips');
+    host.innerHTML = chips.join('');
+    host.hidden = chips.length === 0;
   }
 }
 
@@ -4198,6 +4567,16 @@ function transpose3(m) { return [m[0], m[3], m[6], m[1], m[4], m[7], m[2], m[5],
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const normalize = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 function smoothstep(a, b, x) { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+function dedupePlaces(items) {
+  const seen = new Set();
+  return items.filter(p => {
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return false;
+    const key = `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 16);
+}
 
 UI.prototype.refresh = function () {
   if (this.sheet.classList.contains('open')) this.renderSheet();

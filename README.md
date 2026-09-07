@@ -38,7 +38,18 @@ proper darkness* — and then shows you the frame.
   which ridge it will sit over. Tap anywhere to read that point's elevation and
   distance, then **View POV** to move — the mesh rebuilds in about 80 ms from
   tiles already in hand, and the planner's windows recompute against the new
-  skyline. Drag pans the 2D map; in 3D it orbits; pinch zooms in either view.
+  skyline. Drag pans the 2D map; in 3D, drag orbits while Shift/right-drag or a
+  two-finger drag pans; pinch zooms in either view.
+- **OpenStreetMap layers.** Independently overlay terrain-following roads and
+  labelled nearby peaks, viewpoints, shelters, parking and places. Data is
+  requested on demand for only the local viewport and cached for 24 hours.
+- **Astronomical Sun and Moon.** Accurate apparent positions, Moon phase and
+  terrain lighting travel with the timeline; either disc and label can be
+  hidden independently.
+- **POI-aware location search.** Search peaks, viewpoints, businesses,
+  addresses or coordinates, with nearby OpenStreetMap results ranked around
+  the current map. Status chips, timeline, terrain status and gesture hints can
+  all be hidden for a clean field view.
 - **Field ready.** Installs to the home screen, works offline on cached tiles,
   and follows the device compass so you can hold the tablet up at the spot.
 

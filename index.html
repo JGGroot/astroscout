@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AstroScout">
-<link rel="manifest" href="manifest.webmanifest?v=4">
+<link rel="manifest" href="manifest.webmanifest?v=5">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="css/app.css">
@@ -83,11 +83,13 @@
     <span id="sceneHintText">Drag to pan · scroll to zoom · tap to choose a POV</span>
   </div>
 
+  <a id="osmAttribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" hidden>© OpenStreetMap contributors</a>
+
   <div id="dock">
     <div class="dock-status">
       <div class="mode-readout">
         <span class="status-dot"></span>
-        <div><small>LIVE SCENE</small><b id="modeReadout">2D MAP</b></div>
+        <div><b id="modeReadout">2D MAP</b></div>
       </div>
       <div class="best-window">
         <small>BEST WINDOW</small>
@@ -141,7 +143,7 @@
     <div class="info">
       <small>CHOOSE A VIEWPOINT</small>
       <b id="scoutTitle">Tap anywhere to choose your POV</b>
-      <span id="scoutSub">Drag to pan · pinch to zoom</span>
+      <span id="scoutSub">Drag to orbit · Shift/right-drag to pan · scroll to zoom</span>
     </div>
     <button class="btn primary" id="scoutStand" disabled>View POV</button>
     <button class="btn" id="scoutBack">Current POV</button>
@@ -161,7 +163,7 @@
 <script type="module" src="js/app.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
-  addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=4').catch(() => {}));
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=5').catch(() => {}));
 }
 </script>
 </body>

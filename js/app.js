@@ -7,6 +7,7 @@ import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { BRIGHT_STARS, FIGURES, bvToRGB, fillerStars, loadFullCatalog } from './catalog.js';
 import { SKY_QUALITY } from './presets.js';
+import { fetchOSMFeatures } from './osm.js';
 import {
   DemPyramid, DEM_SOURCES, IMAGERY_SOURCES, tilePlan, buildMesh, horizonAltAt,
   buildImagery, destPoint, haversine, bearing, groundYAt, raycastTerrain
@@ -20,6 +21,10 @@ const DEFAULTS = {
   lightPol: 0.008, magLimit: 7.3,
   showStars: true, showFigures: true, showGrid: false, showGalactic: false,
   showCorePath: true, showLabels: true, showFrame: true, showTerrain: true,
+  showRoads: false, showPOIs: false,
+  showSun: true, showMoon: true,
+  showCoreChip: true, showDarknessChip: true, showMoonChip: true, showCameraChip: true,
+  showTimeline: true, showSceneStatus: true, showHints: true,
   useImagery: true, autoTerrain: true, demSource: 'terrarium', imgSource: 'esri', demKey: '',
   targetAz: null, azTol: 45, coreMinAlt: 5, sunMax: -18, moonIllumFree: 0.10,
   useTerrainHorizon: true, speed: 600, eyeHeight: 1.6, rMax: 160000, scoutLight: 0.55
@@ -61,6 +66,7 @@ class App {
     this.orbit = { cx: 0, cz: 0, dist: 6000, az: 200, pitch: 38 };
     this.blend = 0;          // 0 = eye level, 1 = aerial
     this.pick = null;
+    this.poiMarkers = [];
     this.attribution = 'Elevation: AWS Terrain Tiles (Mapzen). Star data: Bright Star Catalogue positions, J2000.';
     this.catalogNote = 'Using the built-in bright-star list plus procedural filler. Download the full catalogue for ~9 000 real stars (needs a connection once; then cached).';
   }
@@ -88,6 +94,7 @@ class App {
     this.activateFallbackTerrain();
     this._initializingView = true;
     this.setViewMode(['pov', 'orbit', 'map'].includes(this.startView) ? this.startView : 'map');
+    this.syncInterfaceChrome();
     this._initializingView = false;
     this.loop();
     document.getElementById('splash').classList.add('gone');
@@ -101,6 +108,7 @@ class App {
     else this.ui.toast(window.__ASTROSCOUT_PREVIEW
       ? 'Preview build: the sky, timeline and planner are live. Terrain needs the deployed version.'
       : 'Open “Where” to load the terrain for this spot', 5200);
+    if (this.S.showRoads || this.S.showPOIs) this.loadOSMOverlays();
   }
 
   /* ---------- static sky geometry ---------- */
@@ -251,14 +259,16 @@ class App {
     this.skyBright = Math.min(1, day * 1.0 + ill.fraction * moonUp * 0.35 + S.lightPol * 1.2);
 
     // bodies to draw
-    const bodies = [{
+    const bodies = [];
+    if (S.showSun) bodies.push({
       dir: sunDir, kind: 'sun', angularRadius: sun.angularRadius, color: [1.0, 0.93, 0.75],
       spriteScale: 2.4, minPx: 10
-    }, {
+    });
+    if (S.showMoon) bodies.push({
       dir: moonDir, kind: 'moon', angularRadius: moon.angularRadius, color: [0.93, 0.93, 0.90],
       illum: ill.fraction, limbAngle: this.limbAngle(moonDir, ill.brightLimbPA, H),
       spriteScale: 2.2, minPx: 9
-    }];
+    });
     this.planets = [];
     for (const name of A.PLANET_NAMES) {
       const p = A.planetPosition(name, jde);
@@ -295,11 +305,11 @@ class App {
       dir: this.coreDir, text: `CORE  ${this.coreAlt.toFixed(0)}° ${P.compass(this.coreAz)}`,
       color: 'rgba(255,140,66,.95)', ring: 15, cross: true, big: true
     });
-    out.push({
+    if (S.showMoon) out.push({
       dir: this.moonDir, text: `Moon ${(this.ill.fraction * 100).toFixed(0)}%${this.moonAlt < 0 ? ' (down)' : ''}`,
       color: this.moonAlt < 0 ? 'rgba(207,214,230,.42)' : 'rgba(207,214,230,.9)', ring: 9
     });
-    out.push({
+    if (S.showSun) out.push({
       dir: this.sunDir, text: this.sunAlt < 0 ? `Sun ${this.sunAlt.toFixed(0)}°` : 'Sun',
       color: this.sunAlt < 0 ? 'rgba(255,200,120,.45)' : 'rgba(255,200,120,.9)', ring: 9
     });
@@ -366,6 +376,7 @@ class App {
       });
       this.dem = dem; this.mesh = mesh; this.terrainFallback = false;
       this.renderer.setTerrain(mesh);
+      this.renderOSMOverlays();
       let tiles = 0; dem.levels.forEach(l => tiles += l.tiles.size);
       S.terrainLoaded = true; S.autoTerrain = true;
       S.terrainInfo = `${tiles} tiles · ${(mesh.nVerts / 1000) | 0}k vertices · ${(rMax / 1000)} km radius · ground ${mesh.baseElev.toFixed(0)} m`;
@@ -402,6 +413,7 @@ class App {
     });
     this.dem = dem; this.mesh = mesh; this.terrainFallback = true;
     this.renderer.setTerrain(mesh);
+    this.renderOSMOverlays();
     this.S.terrainLoaded = false;
     this.S.terrainInfo = 'Offline navigation surface — elevation not loaded';
     this.invalidate();
@@ -461,6 +473,95 @@ class App {
     await this._imageryLoading;
   }
 
+  /** Enable an independent OpenStreetMap data overlay. Data is requested only
+   * for the local viewport and shared by the Roads and POI layers. */
+  async setOSMLayer(layer, on) {
+    const key = layer === 'roads' ? 'showRoads' : 'showPOIs';
+    this.S[key] = !!on;
+    this.save();
+    this.syncOSMChrome();
+    if (on && !this.osmData) await this.loadOSMOverlays();
+    else this.renderOSMOverlays();
+    this.ui.refresh();
+  }
+
+  syncOSMChrome() {
+    const credit = document.getElementById('osmAttribution');
+    if (credit) credit.hidden = !(this.S.showRoads || this.S.showPOIs);
+  }
+
+  async loadOSMOverlays() {
+    if (this._osmLoading) return this._osmLoading;
+    const key = `${this.S.lat.toFixed(5)},${this.S.lon.toFixed(5)}`;
+    this.ui.toast('Loading local OpenStreetMap roads and places…', 5000);
+    this._osmLoading = (async () => {
+      try {
+        const data = await fetchOSMFeatures(this.S.lat, this.S.lon, 8000);
+        if (`${this.S.lat.toFixed(5)},${this.S.lon.toFixed(5)}` !== key) return;
+        this.osmData = data;
+        this.osmDataKey = key;
+        this.renderOSMOverlays();
+        this.ui.toast(`OpenStreetMap · ${data.roads.length} roads · ${data.pois.length} places`, 3200);
+      } catch (e) {
+        this.ui.toast(`OpenStreetMap unavailable: ${e.name === 'AbortError' ? 'request timed out' : e.message}`, 5000);
+      } finally {
+        this._osmLoading = null;
+        if ((this.S.showRoads || this.S.showPOIs) &&
+            `${this.S.lat.toFixed(5)},${this.S.lon.toFixed(5)}` !== key) this.loadOSMOverlays();
+      }
+    })();
+    return this._osmLoading;
+  }
+
+  /** Re-project geographic OSM data onto the current observer-centred mesh. */
+  renderOSMOverlays() {
+    const r = this.renderer;
+    if (!r) return;
+    r.setWorldLine('osm-roads', null);
+    r.setWorldLine('osm-poi-pins', null);
+    this.poiMarkers = [];
+    this.syncOSMChrome();
+    if (!this.mesh || !this.dem || !this.osmData) { this.invalidate(); return; }
+
+    const point = (lat, lon, lift = 12) => {
+      const d = haversine(this.S.lat, this.S.lon, lat, lon);
+      if (d > Math.min(this.mesh.rMax * 0.8, 18000)) return null;
+      const a = bearing(this.S.lat, this.S.lon, lat, lon) * A.DEG;
+      const x = d * Math.sin(a), z = -d * Math.cos(a);
+      return [x, groundYAt(this.mesh, this.dem, x, z) + lift, z, d];
+    };
+
+    if (this.S.showRoads) {
+      const roadPts = [];
+      for (const road of this.osmData.roads) {
+        for (let i = 1; i < road.geometry.length && roadPts.length < 90000; i++) {
+          const a = point(road.geometry[i - 1][0], road.geometry[i - 1][1]);
+          const b = point(road.geometry[i][0], road.geometry[i][1]);
+          if (a && b) roadPts.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+        }
+      }
+      r.setWorldLine('osm-roads', roadPts, { color: [1.0, 0.76, 0.18, 0.88], mode: 'LINES' });
+    }
+
+    if (this.S.showPOIs) {
+      const pins = [];
+      const candidates = [];
+      for (const poi of this.osmData.pois) {
+        const p = point(poi.lat, poi.lon, 16);
+        if (p) candidates.push({ ...poi, world: p, distance: p[3] });
+      }
+      candidates.sort((a, b) => a.distance - b.distance);
+      this.poiMarkers = candidates.slice(0, 80);
+      for (const poi of this.poiMarkers) {
+        const p = poi.world, h = Math.max(18, Math.min(70, 18 + poi.distance * 0.004));
+        pins.push(p[0], p[1], p[2], p[0], p[1] + h, p[2]);
+        poi.world = [p[0], p[1] + h, p[2]];
+      }
+      r.setWorldLine('osm-poi-pins', pins, { color: [0.38, 0.86, 1.0, 0.92], mode: 'LINES' });
+    }
+    this.invalidate();
+  }
+
   async upgradeCatalog() {
     this.ui.toast('Downloading star catalogue…', 8000);
     const cat = await loadFullCatalog();
@@ -481,28 +582,73 @@ class App {
     S.terrainLoaded = false; S.terrainInfo = '';
     this.mesh = null; this.dem = null;
     this.imageryReady = false;
+    this.osmData = null; this.osmDataKey = null; this.poiMarkers = [];
     this.renderer.clearTerrain();
     this.renderer.setImagery(null);
+    this.renderer.setImagery(null, 'B');
+    this.renderer.setWorldLine('osm-roads', null);
+    this.renderer.setWorldLine('osm-poi-pins', null);
     this.save();
     this.recomputeNight(); this.recompute();
     this.ui.refresh();
     if (S.autoTerrain) this.loadTerrain();
+    if (S.showRoads || S.showPOIs) this.loadOSMOverlays();
   }
 
   async geocode(q) {
-    // coordinates typed directly
+    q = q.trim();
     const m = q.match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
     const out = [];
-    if (m) out.push({ name: `${m[1]}, ${m[2]}`, lat: +m[1], lon: +m[2] });
+    if (m) out.push({ name: `${m[1]}, ${m[2]}`, detail: 'Coordinates', kind: 'coordinates', lat: +m[1], lon: +m[2] });
+    if (m) return dedupePlaces(out);
+
+    // Already-loaded OSM POIs are instant and work offline.
+    const needle = q.toLocaleLowerCase();
+    for (const p of this.osmData?.pois || []) {
+      if (!p.name.toLocaleLowerCase().includes(needle)) continue;
+      out.push({ name: p.name, detail: `${p.kind} · nearby OpenStreetMap feature`, kind: p.kind, lat: p.lat, lon: p.lon });
+    }
+    if (q.length < 2) return out;
+
+    const cacheKey = `astroscout.search.v2:${q.toLocaleLowerCase()}:${this.S.lat.toFixed(1)}:${this.S.lon.toFixed(1)}`;
     try {
-      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&q=${encodeURIComponent(q)}`,
-        { headers: { 'Accept': 'application/json' } });
+      const cached = JSON.parse(localStorage.getItem(cacheKey));
+      if (cached && Date.now() - cached.at < 86400000) return dedupePlaces(out.concat(cached.results));
+    } catch (e) { /* optional cache */ }
+
+    try {
+      // Public Nominatim requires user-triggered search (not autocomplete) and
+      // no more than one request per second for the whole application.
+      const wait = Math.max(0, 1050 - (Date.now() - (this._lastGeocodeAt || 0)));
+      if (wait) await new Promise(resolve => setTimeout(resolve, wait));
+      this._lastGeocodeAt = Date.now();
+      const S = this.S, dLat = 0.7, dLon = 0.9;
+      const params = new URLSearchParams({
+        format: 'jsonv2', limit: '12', q,
+        addressdetails: '1', extratags: '1', namedetails: '1',
+        'accept-language': navigator.language || 'en',
+        viewbox: `${S.lon - dLon},${S.lat + dLat},${S.lon + dLon},${S.lat - dLat}`
+      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+      const endpoint = localStorage.getItem('astroscout.nominatimEndpoint') || 'https://nominatim.openstreetmap.org/search';
+      const r = await fetch(`${endpoint}?${params}`,
+        { mode: 'cors', credentials: 'omit', referrerPolicy: 'strict-origin-when-cross-origin',
+          headers: { Accept: 'application/json' }, signal: controller.signal });
+      clearTimeout(timeout);
       if (r.ok) {
         const j = await r.json();
-        for (const h of j) out.push({ name: h.display_name, lat: +h.lat, lon: +h.lon });
+        const results = j.map(h => ({
+          name: h.namedetails?.name || h.display_name.split(',')[0],
+          detail: h.display_name,
+          kind: h.addresstype || h.type || h.category || 'place',
+          lat: +h.lat, lon: +h.lon
+        }));
+        try { localStorage.setItem(cacheKey, JSON.stringify({ at: Date.now(), results })); } catch (e) { /* quota */ }
+        out.push(...results);
       }
     } catch (e) { /* offline: presets and coordinates still work */ }
-    return out;
+    return dedupePlaces(out);
   }
 
   useGPS() {
@@ -602,7 +748,23 @@ class App {
       ? (this.imageryReady ? '2D SATELLITE MAP' : '2D TOPOGRAPHIC MAP')
       : view === 'orbit' ? '3D TERRAIN' : 'GROUND POV';
     const hint = document.getElementById('sceneHintText');
-    if (hint) hint.textContent = view === 'map' ? 'Drag to pan · scroll to zoom · tap to choose a POV' : view === 'orbit' ? 'Drag to orbit · scroll to fly · tap to choose a POV' : 'Drag to look · scroll to zoom';
+    if (hint) hint.textContent = view === 'map' ? 'Drag to pan · scroll to zoom · tap to choose a POV' : view === 'orbit' ? 'Drag to orbit · Shift/right-drag or two-finger drag to pan' : 'Drag to look · scroll to zoom';
+  }
+
+  syncInterfaceChrome() {
+    const S = this.S, stage = document.getElementById('stage');
+    const timeline = document.querySelector('.timeline-wrap');
+    const status = document.querySelector('.dock-status');
+    const hint = document.getElementById('sceneHint');
+    if (timeline) timeline.hidden = !S.showTimeline;
+    if (status) status.hidden = !S.showSceneStatus;
+    if (hint) hint.hidden = !S.showHints;
+    if (stage) {
+      stage.classList.toggle('timeline-hidden', !S.showTimeline);
+      stage.classList.toggle('status-hidden', !S.showSceneStatus);
+    }
+    this.updateChips();
+    this.invalidate();
   }
 
   syncSatelliteChrome() {
@@ -737,6 +899,7 @@ class App {
     });
     this.mesh = mesh;
     this.renderer.setTerrain(mesh);
+    this.renderOSMOverlays();
     this.pick = null;
     this.renderer.setWorldLine('pickring', null);
     this.renderer.setWorldLine('pickpin', null);
@@ -817,10 +980,31 @@ class App {
   bindInput() {
     const stage = document.getElementById('stage');
     const pts = new Map();
+    const panIds = new Set();
     let lastDist = 0;
+    const panAerial = (dx, dy) => {
+      const h = Math.max(1, this.renderer.h / this.dpr);
+      const metresPerPx = 2 * this.orbit.dist * Math.tan(this.view.vfovDeg * A.DEG / 2) / h;
+      const a = this.orbit.az * A.DEG;
+      const vertical = this.aerialView === 'map' ? 1 : 1 / Math.max(0.28, Math.sin(this.orbit.pitch * A.DEG));
+      this.orbit.cx += (-dx * Math.cos(a) + dy * vertical * Math.sin(a)) * metresPerPx;
+      this.orbit.cz += (-dx * Math.sin(a) - dy * vertical * Math.cos(a)) * metresPerPx;
+      const limit = this.mesh ? this.mesh.rMax * 0.68 : 30000;
+      const d = Math.hypot(this.orbit.cx, this.orbit.cz);
+      if (d > limit) {
+        this.orbit.cx *= limit / d;
+        this.orbit.cz *= limit / d;
+      }
+      this.dirty = true;
+    };
     stage.addEventListener('pointerdown', e => {
       if (e.target.closest('#dock,#sheet,#top,#viewSwitcher,#toolrail,#scoutbar')) return;
       pts.set(e.pointerId, e); stage.setPointerCapture(e.pointerId);
+      if (e.button === 1 || e.button === 2 || e.shiftKey) panIds.add(e.pointerId);
+      if (pts.size === 2) {
+        const a = [...pts.values()];
+        lastDist = Math.hypot(a[0].clientX - a[1].clientX, a[0].clientY - a[1].clientY);
+      }
       this._moved = false; this._downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
     });
     stage.addEventListener('pointermove', e => {
@@ -831,20 +1015,10 @@ class App {
       if (Math.abs(dx) + Math.abs(dy) > 3) this._moved = true;
       if (pts.size === 1 && this.mode === 'aerial') {
         if (this.aerialView === 'map') {
-          // Conventional map pan: the terrain follows the pointer without
-          // changing north/heading or tilting out of the 2D view.
-          const h = Math.max(1, this.renderer.h / this.dpr);
-          const metresPerPx = 2 * this.orbit.dist * Math.tan(this.view.vfovDeg * A.DEG / 2) / h;
-          const a = this.orbit.az * A.DEG;
-          this.orbit.cx += (-dx * Math.cos(a) + dy * Math.sin(a)) * metresPerPx;
-          this.orbit.cz += (-dx * Math.sin(a) - dy * Math.cos(a)) * metresPerPx;
-          const limit = this.mesh ? this.mesh.rMax * 0.68 : 30000;
-          const d = Math.hypot(this.orbit.cx, this.orbit.cz);
-          if (d > limit) {
-            this.orbit.cx *= limit / d;
-            this.orbit.cz *= limit / d;
-          }
+          panAerial(dx, dy);
           this.orbit.pitch = 90;
+        } else if (panIds.has(e.pointerId)) {
+          panAerial(dx, dy);
         } else {
           this.orbit.az = ((this.orbit.az - dx * 0.35) % 360 + 360) % 360;
           this.orbit.pitch = Math.max(8, Math.min(88, this.orbit.pitch + dy * 0.25));
@@ -858,19 +1032,25 @@ class App {
       } else if (pts.size === 2) {
         const a = [...pts.values()];
         const d = Math.hypot(a[0].clientX - a[1].clientX, a[0].clientY - a[1].clientY);
+        const beforeX = (prev.clientX + a.find(p => p.pointerId !== e.pointerId).clientX) / 2;
+        const beforeY = (prev.clientY + a.find(p => p.pointerId !== e.pointerId).clientY) / 2;
+        const afterX = (a[0].clientX + a[1].clientX) / 2;
+        const afterY = (a[0].clientY + a[1].clientY) / 2;
+        if (this.mode === 'aerial') panAerial(afterX - beforeX, afterY - beforeY);
         if (lastDist) this.zoom(d / lastDist);
         lastDist = d;
       }
     });
     const up = e => {
-      if (!this._moved && this.mode === 'aerial' && this._downAt &&
+      if (!this._moved && !panIds.has(e.pointerId) && this.mode === 'aerial' && this._downAt &&
           performance.now() - this._downAt.t < 600 && pts.has(e.pointerId)) {
         this.pickAt(e.clientX, e.clientY);
       }
-      pts.delete(e.pointerId); if (pts.size < 2) lastDist = 0;
+      pts.delete(e.pointerId); panIds.delete(e.pointerId); if (pts.size < 2) lastDist = 0;
     };
     stage.addEventListener('pointerup', up);
     stage.addEventListener('pointercancel', up);
+    stage.addEventListener('contextmenu', e => { if (this.mode === 'aerial') e.preventDefault(); });
     stage.addEventListener('wheel', e => { e.preventDefault(); this.zoom(e.deltaY > 0 ? 0.92 : 1.087); }, { passive: false });
     window.addEventListener('keydown', e => {
       const k = e.key;
@@ -1021,14 +1201,15 @@ class App {
 
     const chips = [];
     const clear = this.mesh ? horizonAltAt(this.mesh, this.coreAz) : 0;
-    const above = this.coreAlt > clear;
-    chips.push(`<div class="chip core">CORE <b>${this.coreAlt.toFixed(0)}° ${P.compass(this.coreAz)}</b>${this.mesh ? ` · skyline ${clear.toFixed(0)}°` : ''}</div>`);
-    chips.push(`<div class="chip ${this.sunAlt < -18 ? 'good' : this.sunAlt < -12 ? '' : 'warn'}">sun <b>${this.sunAlt.toFixed(0)}°</b> ${this.sunAlt < -18 ? 'astro dark' : this.sunAlt < -12 ? 'nautical' : this.sunAlt < -6 ? 'civil' : this.sunAlt < 0 ? 'twilight' : 'day'}</div>`);
-    chips.push(`<div class="chip moon">moon <b>${(this.ill.fraction * 100).toFixed(0)}%</b> ${this.moonAlt > 0 ? `up ${this.moonAlt.toFixed(0)}°` : 'down'}</div>`);
+    if (S.showCoreChip) chips.push(`<div class="chip core">CORE <b>${this.coreAlt.toFixed(0)}° ${P.compass(this.coreAz)}</b>${this.mesh ? ` · skyline ${clear.toFixed(0)}°` : ''}</div>`);
+    if (S.showDarknessChip) chips.push(`<div class="chip ${this.sunAlt < -18 ? 'good' : this.sunAlt < -12 ? '' : 'warn'}">sun <b>${this.sunAlt.toFixed(0)}°</b> ${this.sunAlt < -18 ? 'astro dark' : this.sunAlt < -12 ? 'nautical' : this.sunAlt < -6 ? 'civil' : this.sunAlt < 0 ? 'twilight' : 'day'}</div>`);
+    if (S.showMoonChip) chips.push(`<div class="chip moon">moon <b>${(this.ill.fraction * 100).toFixed(0)}%</b> ${this.moonAlt > 0 ? `up ${this.moonAlt.toFixed(0)}°` : 'down'}</div>`);
     const e = P.exposureAdvice({ focal: S.focal, fNumber: S.fNumber, sensor: S.sensor, megapixels: S.mp, decl: this.coreDec });
-    chips.push(`<div class="chip">${Math.round(S.focal)}mm f/${S.fNumber.toFixed(1)} · <b>${e.npf.toFixed(0)}s</b> · ISO ${e.suggestedISO}</div>`);
-    if (!sum.hasAstroDark) chips.push(`<div class="chip warn">no astro dark tonight <b>(${sum.darkestSunAlt.toFixed(0)}°)</b></div>`);
-    document.getElementById('chips').innerHTML = chips.join('');
+    if (S.showCameraChip) chips.push(`<div class="chip">${Math.round(S.focal)}mm f/${S.fNumber.toFixed(1)} · <b>${e.npf.toFixed(0)}s</b> · ISO ${e.suggestedISO}</div>`);
+    if (S.showDarknessChip && !sum.hasAstroDark) chips.push(`<div class="chip warn">no astro dark tonight <b>(${sum.darkestSunAlt.toFixed(0)}°)</b></div>`);
+    const host = document.getElementById('chips');
+    host.innerHTML = chips.join('');
+    host.hidden = chips.length === 0;
   }
 }
 
@@ -1038,6 +1219,16 @@ function transpose3(m) { return [m[0], m[3], m[6], m[1], m[4], m[7], m[2], m[5],
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const normalize = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 function smoothstep(a, b, x) { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+function dedupePlaces(items) {
+  const seen = new Set();
+  return items.filter(p => {
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return false;
+    const key = `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 16);
+}
 
 UI.prototype.refresh = function () {
   if (this.sheet.classList.contains('open')) this.renderSheet();

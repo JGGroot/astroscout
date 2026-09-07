@@ -4,12 +4,12 @@
  * Map and elevation tiles are cached as they are used (the app also keeps its
  * own IndexedDB copy, which is what survives a cache eviction).
  */
-const VERSION = 'astroscout-v4';
+const VERSION = 'astroscout-v5';
 const SHELL = [
-  './', './index.html', './manifest.webmanifest?v=4',
+  './', './index.html', './manifest.webmanifest?v=5',
   './css/app.css',
   './js/app.js', './js/astro.js', './js/catalog.js', './js/planner.js',
-  './js/presets.js', './js/render.js', './js/terrain.js', './js/ui.js',
+  './js/presets.js', './js/render.js', './js/terrain.js', './js/osm.js', './js/ui.js',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'
 ];
 const TILE_HOSTS = [

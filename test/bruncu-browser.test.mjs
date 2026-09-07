@@ -11,6 +11,7 @@ const DEBUG_PORT = 9311;
 const profile = path.join(ROOT, 'test', '.bruncu-browser-profile');
 const mapShot = path.join(ROOT, 'test', 'shots', 'bruncu-spina-satellite.png');
 const povShot = path.join(ROOT, 'test', 'shots', 'bruncu-spina-pov.png');
+const osmShot = path.join(ROOT, 'test', 'shots', 'bruncu-spina-osm-layers.png');
 const edge = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -99,6 +100,71 @@ try {
   if (diagnostics.glError !== 0) throw new Error(`WebGL error: ${diagnostics.glError}`);
   diagnostics.defaultView = '2D top-down map';
 
+  const osmCheck = await send('Runtime.evaluate', {
+    expression: `(async () => {
+      await app.setOSMLayer('roads', true);
+      await app.setOSMLayer('pois', true);
+      const result = {
+        roads: app.osmData?.roads.length || 0,
+        pois: app.osmData?.pois.length || 0,
+        roadGeometry: app.renderer.worldLines.has('osm-roads'),
+        poiGeometry: app.renderer.worldLines.has('osm-poi-pins'),
+        markers: app.poiMarkers.length,
+        attribution: !document.querySelector('#osmAttribution').hidden
+      };
+      return result;
+    })()`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+  const osm = osmCheck.result.value;
+  if (!osm?.roads || !osm?.pois || !osm.roadGeometry || !osm.poiGeometry || !osm.markers || !osm.attribution) {
+    throw new Error(`OSM overlay failure: ${JSON.stringify(osm)}`);
+  }
+  diagnostics.osm = `${osm.roads} roads · ${osm.pois} POIs · terrain geometry and attribution present`;
+
+  const interfaceCheck = await send('Runtime.evaluate', {
+    expression: `(async () => {
+      const a = window.app, S = a.S;
+      S.showSun = false; S.showMoon = false; a.recompute();
+      const hiddenBodies = !a.bodies.some(b => b.kind === 'sun' || b.kind === 'moon') &&
+        !a.labels.some(l => l.text.startsWith('Sun') || l.text.startsWith('Moon'));
+      S.showDarknessChip = false; S.showTimeline = false; S.showSceneStatus = false; S.showHints = false;
+      a.syncInterfaceChrome();
+      const hiddenChrome = document.querySelector('.timeline-wrap').hidden &&
+        document.querySelector('.dock-status').hidden && document.querySelector('#sceneHint').hidden &&
+        !document.querySelector('#chips').textContent.toLowerCase().includes('sun');
+      a.ui.openSheet('where');
+      const searchUI = document.querySelector('.searchbar button')?.textContent === 'Search' &&
+        document.querySelector('.searchbar input')?.placeholder.includes('viewpoints');
+      const coord = await a.geocode('40.01601, 9.30192');
+      a.ui.closeSheet();
+      S.showSun = true; S.showMoon = true; S.showDarknessChip = true;
+      S.showTimeline = true; S.showSceneStatus = true; S.showHints = true;
+      a.recompute(); a.syncInterfaceChrome();
+      return { hiddenBodies, hiddenChrome, searchUI, coordinateSearch: coord[0] };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+  const iface = interfaceCheck.result.value;
+  if (!iface?.hiddenBodies || !iface.hiddenChrome || !iface.searchUI ||
+      Math.abs(iface.coordinateSearch?.lat - 40.01601) > 1e-8 || Math.abs(iface.coordinateSearch?.lon - 9.30192) > 1e-8) {
+    throw new Error(`Interface control failure: ${JSON.stringify(iface)}`);
+  }
+  diagnostics.interface = 'Sun, Moon, darkness, timeline, status and hints can be hidden · POI/coordinate search ready';
+
+  await send('Runtime.evaluate', {
+    expression: `(() => { app.setViewMode('orbit'); app.blend = 1; app.orbit.az = 205; app.orbit.pitch = 42; app.orbit.dist = 9500; app.invalidate(); })()`
+  });
+  await sleep(800);
+  const osmCapture = await send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  await writeFile(osmShot, Buffer.from(osmCapture.data, 'base64'));
+  await send('Runtime.evaluate', {
+    expression: `(async () => { app.setViewMode('map'); await app.setOSMLayer('roads', false); await app.setOSMLayer('pois', false); })()`,
+    awaitPromise: true
+  });
+
   const transitionCheck = await send('Runtime.evaluate', {
     expression: `(() => {
       const a = window.app, states = [];
@@ -113,6 +179,24 @@ try {
   const expected = JSON.stringify([['aerial', 'orbit', true], ['eye', true], ['aerial', 'map', true]]);
   if (JSON.stringify(transitions) !== expected) throw new Error(`View transition failure: ${JSON.stringify(transitions)}`);
   diagnostics.transitions = 'map → orbit → POV → map';
+
+  const panBefore = (await send('Runtime.evaluate', {
+    expression: `(() => { app.setViewMode('orbit'); app.blend = 1; app.invalidate(); return { cx: app.orbit.cx, cz: app.orbit.cz, az: app.orbit.az, pitch: app.orbit.pitch }; })()`,
+    returnByValue: true
+  })).result.value;
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 700, y: 350, button: 'right', buttons: 2, clickCount: 1 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 780, y: 390, button: 'right', buttons: 2 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 780, y: 390, button: 'right', buttons: 0, clickCount: 1 });
+  const panAfter = (await send('Runtime.evaluate', {
+    expression: `(() => ({ cx: app.orbit.cx, cz: app.orbit.cz, az: app.orbit.az, pitch: app.orbit.pitch }))()`,
+    returnByValue: true
+  })).result.value;
+  if (Math.hypot(panAfter.cx - panBefore.cx, panAfter.cz - panBefore.cz) < 10 ||
+      Math.abs(panAfter.az - panBefore.az) > 0.01 || Math.abs(panAfter.pitch - panBefore.pitch) > 0.01) {
+    throw new Error(`3D pan failure: ${JSON.stringify({ panBefore, panAfter })}`);
+  }
+  diagnostics.terrainPan = `right-drag moved ${(Math.hypot(panAfter.cx - panBefore.cx, panAfter.cz - panBefore.cz) / 1000).toFixed(2)} km without rotating`;
+  await send('Runtime.evaluate', { expression: `app.setViewMode('map')` });
 
   const fallbackCheck = await send('Runtime.evaluate', {
     expression: `(() => {
