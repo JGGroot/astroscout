@@ -21,7 +21,7 @@ const DEFAULTS = {
   lightPol: 0.008, magLimit: 7.3,
   showStars: true, showFigures: true, showGrid: false, showGalactic: false,
   showCorePath: true, showLabels: true, showFrame: true, showTerrain: true,
-  showRoads: false, showPOIs: false,
+  showRoads: true, showPOIs: true,
   showSun: true, showMoon: true,
   showCoreChip: true, showDarknessChip: true, showMoonChip: true, showCameraChip: true,
   showTimeline: true, showSceneStatus: true, showHints: true,
@@ -53,6 +53,14 @@ class App {
     if (query.get('satellite') !== '0' && !this.S.imageryDefaultV4) {
       this.S.useImagery = true;
       this.S.imageryDefaultV4 = true;
+      this.save();
+    }
+    // v6 introduces visible map context by default. Migrate v5 state once so
+    // returning users actually see the new roads and POIs; later choices stick.
+    if (!this.S.osmDefaultsV6) {
+      this.S.showRoads = true;
+      this.S.showPOIs = true;
+      this.S.osmDefaultsV6 = true;
       this.save();
     }
     this.date = new Date();
@@ -480,6 +488,7 @@ class App {
     this.S[key] = !!on;
     this.save();
     this.syncOSMChrome();
+    this.ui.refresh();
     if (on && !this.osmData) await this.loadOSMOverlays();
     else this.renderOSMOverlays();
     this.ui.refresh();
@@ -488,11 +497,26 @@ class App {
   syncOSMChrome() {
     const credit = document.getElementById('osmAttribution');
     if (credit) credit.hidden = !(this.S.showRoads || this.S.showPOIs);
+    const button = document.getElementById('btnLayers');
+    if (button) {
+      const enabled = this.S.showRoads || this.S.showPOIs;
+      button.classList.toggle('layers-active', enabled);
+      button.classList.toggle('loading', !!this._osmLoading);
+      button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+      const label = button.querySelector('span');
+      if (label) label.textContent = this._osmLoading ? 'Loading' : 'Layers';
+      button.title = this._osmLoading ? 'Loading OpenStreetMap layers…'
+        : this._osmError ? `Layers: ${this._osmError}`
+        : this.osmData ? `Layers: ${this.osmData.roads.length} roads, ${this.osmData.pois.length} POIs`
+        : 'Map and sky layers';
+    }
   }
 
-  async loadOSMOverlays() {
+  async loadOSMOverlays(force = false) {
     if (this._osmLoading) return this._osmLoading;
+    if (force) { this.osmData = null; this.osmDataKey = null; }
     const key = `${this.S.lat.toFixed(5)},${this.S.lon.toFixed(5)}`;
+    this._osmError = '';
     this.ui.toast('Loading local OpenStreetMap roads and places…', 5000);
     this._osmLoading = (async () => {
       try {
@@ -503,13 +527,18 @@ class App {
         this.renderOSMOverlays();
         this.ui.toast(`OpenStreetMap · ${data.roads.length} roads · ${data.pois.length} places`, 3200);
       } catch (e) {
-        this.ui.toast(`OpenStreetMap unavailable: ${e.name === 'AbortError' ? 'request timed out' : e.message}`, 5000);
+        this._osmError = e.name === 'AbortError' ? 'request timed out' : e.message;
+        this.ui.toast(`OpenStreetMap unavailable: ${this._osmError}`, 5000);
       } finally {
         this._osmLoading = null;
+        this.syncOSMChrome();
+        this.ui.refresh();
         if ((this.S.showRoads || this.S.showPOIs) &&
             `${this.S.lat.toFixed(5)},${this.S.lon.toFixed(5)}` !== key) this.loadOSMOverlays();
       }
     })();
+    this.syncOSMChrome();
+    this.ui.refresh();
     return this._osmLoading;
   }
 
@@ -583,6 +612,7 @@ class App {
     this.mesh = null; this.dem = null;
     this.imageryReady = false;
     this.osmData = null; this.osmDataKey = null; this.poiMarkers = [];
+    this.pick = null; this._osmError = '';
     this.renderer.clearTerrain();
     this.renderer.setImagery(null);
     this.renderer.setImagery(null, 'B');
@@ -1020,13 +1050,13 @@ class App {
         } else if (panIds.has(e.pointerId)) {
           panAerial(dx, dy);
         } else {
-          this.orbit.az = ((this.orbit.az - dx * 0.35) % 360 + 360) % 360;
+          this.orbit.az = ((this.orbit.az + dx * 0.35) % 360 + 360) % 360;
           this.orbit.pitch = Math.max(8, Math.min(88, this.orbit.pitch + dy * 0.25));
         }
         this.dirty = true;
       } else if (pts.size === 1) {
         const degPerPx = this.view.vfovDeg / (this.renderer.h / this.dpr);
-        this.view.az = ((this.view.az - dx * degPerPx) % 360 + 360) % 360;
+        this.view.az = ((this.view.az + dx * degPerPx) % 360 + 360) % 360;
         this.view.alt = Math.max(-85, Math.min(88, this.view.alt + dy * degPerPx));
         this.dirty = true;
       } else if (pts.size === 2) {
@@ -1051,7 +1081,10 @@ class App {
     stage.addEventListener('pointerup', up);
     stage.addEventListener('pointercancel', up);
     stage.addEventListener('contextmenu', e => { if (this.mode === 'aerial') e.preventDefault(); });
-    stage.addEventListener('wheel', e => { e.preventDefault(); this.zoom(e.deltaY > 0 ? 0.92 : 1.087); }, { passive: false });
+    stage.addEventListener('wheel', e => {
+      if (e.target.closest('#dock,#sheet,#top,#viewSwitcher,#toolrail,#scoutbar')) return;
+      e.preventDefault(); this.zoom(e.deltaY > 0 ? 0.92 : 1.087);
+    }, { passive: false });
     window.addEventListener('keydown', e => {
       const k = e.key;
       if (k === 'ArrowLeft') this.view.az = (this.view.az - 2 + 360) % 360;
@@ -1231,7 +1264,7 @@ function dedupePlaces(items) {
 }
 
 UI.prototype.refresh = function () {
-  if (this.sheet.classList.contains('open')) this.renderSheet();
+  if (!this.sheet.hidden) this.renderSheet();
   this.app.invalidate();
 };
 

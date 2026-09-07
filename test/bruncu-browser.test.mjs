@@ -100,6 +100,43 @@ try {
   if (diagnostics.glError !== 0) throw new Error(`WebGL error: ${diagnostics.glError}`);
   diagnostics.defaultView = '2D top-down map';
 
+  await send('Runtime.evaluate', { expression: `(() => { app.ui.closeSheet(); app.ui.openSheet('layers'); })()` });
+  await sleep(400);
+  const layerPanelStart = (await send('Runtime.evaluate', {
+    expression: `(() => {
+      const body = document.querySelector('#sheetBody'); body.scrollTop = 0;
+      const r = body.getBoundingClientRect();
+      window.__layerWheel = null;
+      body.addEventListener('wheel', e => { window.__layerWheel = { prevented: e.defaultPrevented, target: e.target.className }; }, { once: true });
+      return { tab: app.ui.tab, cards: body.querySelectorAll('.layer-card').length,
+        ranges: body.querySelectorAll('input[type=range]').length,
+        scrollHeight: body.scrollHeight, clientHeight: body.clientHeight,
+        sheetClass: document.querySelector('#sheet').className,
+        innerWidth, dpr: devicePixelRatio, rect: { left: r.left, right: r.right, top: r.top, bottom: r.bottom },
+        x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 220), dist: app.orbit.dist,
+        scoutHidden: document.querySelector('#scoutbar').hidden };
+    })()`, returnByValue: true
+  })).result.value;
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: layerPanelStart.x, y: layerPanelStart.y, button: 'none', buttons: 0 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: layerPanelStart.x, y: layerPanelStart.y, deltaX: 0, deltaY: 320 });
+  await sleep(250);
+  const layerPanelEnd = (await send('Runtime.evaluate', {
+    expression: `(() => {
+      const body = document.querySelector('#sheetBody'), nativeScrollTop = body.scrollTop;
+      body.scrollTop = 100;
+      return { nativeScrollTop, canScroll: body.scrollTop === 100, dist: app.orbit.dist, wheel: window.__layerWheel };
+    })()`,
+    returnByValue: true
+  })).result.value;
+  await send('Runtime.evaluate', { expression: `app.ui.closeSheet()` });
+  if (layerPanelStart.tab !== 'layers' || layerPanelStart.cards < 4 || layerPanelStart.ranges !== 0 ||
+      layerPanelStart.scrollHeight <= layerPanelStart.clientHeight || !layerPanelEnd.canScroll ||
+      !layerPanelEnd.wheel || layerPanelEnd.wheel.prevented ||
+      layerPanelEnd.dist !== layerPanelStart.dist || !layerPanelStart.scoutHidden) {
+    throw new Error(`Layers panel failure: ${JSON.stringify({ layerPanelStart, layerPanelEnd })}`);
+  }
+  diagnostics.layersPanel = 'dedicated layer manager scrolls without zooming · viewpoint card stays hidden until selection';
+
   const osmCheck = await send('Runtime.evaluate', {
     expression: `(async () => {
       await app.setOSMLayer('roads', true);
@@ -179,6 +216,35 @@ try {
   const expected = JSON.stringify([['aerial', 'orbit', true], ['eye', true], ['aerial', 'map', true]]);
   if (JSON.stringify(transitions) !== expected) throw new Error(`View transition failure: ${JSON.stringify(transitions)}`);
   diagnostics.transitions = 'map → orbit → POV → map';
+
+  const orbitLookBefore = (await send('Runtime.evaluate', {
+    expression: `(() => { app.setViewMode('orbit'); app.blend = 1; return { az: app.orbit.az, pitch: app.orbit.pitch }; })()`,
+    returnByValue: true
+  })).result.value;
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 650, y: 330, button: 'left', buttons: 1, clickCount: 1 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 710, y: 330, button: 'left', buttons: 1 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 710, y: 330, button: 'left', buttons: 0, clickCount: 1 });
+  const orbitLookAfter = (await send('Runtime.evaluate', {
+    expression: `(() => ({ az: app.orbit.az, pitch: app.orbit.pitch }))()`, returnByValue: true
+  })).result.value;
+  const orbitDelta = ((orbitLookAfter.az - orbitLookBefore.az + 540) % 360) - 180;
+  if (orbitDelta <= 0 || Math.abs(orbitLookAfter.pitch - orbitLookBefore.pitch) > 0.01)
+    throw new Error(`Orbit horizontal inversion failure: ${JSON.stringify({ orbitLookBefore, orbitLookAfter })}`);
+
+  const povLookBefore = (await send('Runtime.evaluate', {
+    expression: `(() => { app.setViewMode('pov'); app.blend = 0; return { az: app.view.az, alt: app.view.alt }; })()`,
+    returnByValue: true
+  })).result.value;
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 650, y: 330, button: 'left', buttons: 1, clickCount: 1 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 710, y: 330, button: 'left', buttons: 1 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 710, y: 330, button: 'left', buttons: 0, clickCount: 1 });
+  const povLookAfter = (await send('Runtime.evaluate', {
+    expression: `(() => ({ az: app.view.az, alt: app.view.alt }))()`, returnByValue: true
+  })).result.value;
+  const povDelta = ((povLookAfter.az - povLookBefore.az + 540) % 360) - 180;
+  if (povDelta <= 0 || Math.abs(povLookAfter.alt - povLookBefore.alt) > 0.01)
+    throw new Error(`POV horizontal inversion failure: ${JSON.stringify({ povLookBefore, povLookAfter })}`);
+  diagnostics.cameraDrag = 'horizontal drag inverted in 3D and POV · pitch direction unchanged';
 
   const panBefore = (await send('Runtime.evaluate', {
     expression: `(() => { app.setViewMode('orbit'); app.blend = 1; app.invalidate(); return { cx: app.orbit.cx, cz: app.orbit.cz, az: app.orbit.az, pitch: app.orbit.pitch }; })()`,

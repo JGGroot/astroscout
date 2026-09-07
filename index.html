@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AstroScout">
-<link rel="manifest" href="manifest.webmanifest?v=5">
+<link rel="manifest" href="manifest.webmanifest?v=6">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="css/app.css">
@@ -122,12 +122,12 @@
       <button class="tab" data-tab="when"><span class="tab-key">02</span>Time</button>
       <button class="tab" data-tab="camera"><span class="tab-key">03</span>Camera</button>
       <button class="tab" data-tab="plan"><span class="tab-key">04</span>Plan</button>
-      <button class="tab" data-tab="sky"><span class="tab-key">05</span>Layers</button>
+      <button class="tab" data-tab="layers"><span class="tab-key">05</span>Layers</button>
       <button class="tab" data-tab="about"><span class="tab-key">06</span>About</button>
     </div>
   </div>
 
-  <div id="sheet">
+  <div id="sheet" hidden>
     <div class="grabber"></div>
     <header>
       <div><span class="eyebrow">ASTROSCOUT CONTROL</span><h2 id="sheetTitle"></h2></div>
@@ -163,7 +163,7 @@
 <script type="module" src="js/app.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
-  addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=5').catch(() => {}));
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=6').catch(() => {}));
 }
 </script>
 </body>

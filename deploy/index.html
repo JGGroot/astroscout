@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AstroScout">
-<link rel="manifest" href="manifest.webmanifest?v=5">
+<link rel="manifest" href="manifest.webmanifest?v=6">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <style>
@@ -26,12 +26,12 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
-html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 button,input,select,textarea{font:inherit}
 button{color:inherit}
 svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
 #stage{position:fixed;inset:0;isolation:isolate;background:radial-gradient(circle at 50% 38%,#142924 0,#07100f 48%,#030706 100%)}
-#gl,#hud{position:absolute;inset:0;width:100%;height:100%;display:block}
+#gl,#hud{position:absolute;inset:0;width:100%;height:100%;display:block}#gl{touch-action:none}
 #hud{pointer-events:none}
 .scene-vignette{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(2,6,6,.72) 0,transparent 18%,transparent 58%,rgba(2,7,6,.28) 73%,rgba(2,6,6,.9) 100%);mix-blend-mode:multiply}
 
@@ -69,9 +69,10 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;strok
 
 /* Floating scene tools */
 #toolrail{position:absolute;z-index:9;left:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;pointer-events:auto}
-.railbtn{width:58px;min-height:58px;padding:8px 4px 6px;border:1px solid var(--line);border-radius:14px;background:rgba(6,14,13,.7);backdrop-filter:blur(16px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--dim);cursor:pointer;transition:.18s ease}
+.railbtn{position:relative;width:58px;min-height:58px;padding:8px 4px 6px;border:1px solid var(--line);border-radius:14px;background:rgba(6,14,13,.7);backdrop-filter:blur(16px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--dim);cursor:pointer;transition:.18s ease}
 .railbtn svg{width:19px;height:19px}.railbtn span{font-size:8px;text-transform:uppercase;letter-spacing:.08em}
 .railbtn.on{color:var(--accent);border-color:rgba(214,255,82,.45);background:rgba(35,48,28,.76);box-shadow:inset 0 0 24px rgba(214,255,82,.05)}
+.railbtn.panel-open{color:var(--accent);border-color:rgba(214,255,82,.55);background:rgba(35,48,28,.84)}#btnLayers.layers-active:before{content:'';position:absolute;right:7px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}#btnLayers.loading:before{display:none}
 .railbtn.loading{position:relative;color:var(--fg);border-color:rgba(214,255,82,.25)}
 .railbtn.loading:after{content:'';position:absolute;inset:4px;border:1px solid transparent;border-top-color:var(--accent);border-radius:11px;animation:loading-ring 1s linear infinite}
 @keyframes loading-ring{to{transform:rotate(360deg)}}
@@ -106,11 +107,10 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;strok
 .tab-key{font:8px/1 'DM Mono',monospace;color:var(--dim2)}.tab.on .tab-key{color:var(--accent)}
 
 /* Inspector sheet */
-#sheet{position:absolute;right:16px;bottom:170px;z-index:30;width:390px;max-height:calc(100% - 270px);background:var(--panel);backdrop-filter:blur(28px);border:1px solid var(--line-strong);border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.45);transform:translateX(calc(100% + 28px));transition:transform .28s cubic-bezier(.3,.8,.3,1);display:flex;flex-direction:column;pointer-events:auto;overflow:hidden}
-#sheet.open{transform:translateX(0)}
+#sheet{position:absolute;right:16px;bottom:170px;z-index:30;width:390px;max-height:calc(100% - 270px);background:var(--panel);backdrop-filter:blur(28px);border:1px solid var(--line-strong);border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;pointer-events:auto;overflow:hidden}
 #sheet header{display:flex;align-items:center;gap:8px;padding:17px 16px 12px;border-bottom:1px solid var(--line);flex:0 0 auto}
 #sheet header>div{flex:1}#sheet h2{margin:0;font-size:16px;font-weight:600;letter-spacing:-.02em}.grabber{display:none}
-#sheet .body{overflow-y:auto;padding:14px 16px 18px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
+#sheet .body{overflow-y:auto;padding:14px 16px 18px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
 #sheetClose{width:32px;height:32px;flex-basis:32px}
 
 /* Controls */
@@ -126,11 +126,12 @@ input[type=range]{width:100%;accent-color:var(--accent);background:transparent}
 .pill{padding:8px 9px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.045);text-align:center;font-size:10px;text-transform:capitalize;cursor:pointer}.pill.on{border-color:rgba(214,255,82,.5);background:rgba(214,255,82,.1);color:var(--accent)}
 .switch{margin-left:auto;width:39px;height:23px;border-radius:13px;background:rgba(255,255,255,.14);position:relative;cursor:pointer;flex:0 0 39px;transition:background .15s}.switch::after{content:'';position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s}.switch.on{background:var(--accent)}.switch.on::after{transform:translateX(16px);background:#172000}.switch:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .searchbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}.searchbar .btn{min-width:74px}.searchbar .btn:disabled{opacity:.55;cursor:wait}.search-note a{color:var(--accent);text-decoration:none}.search-state{color:var(--dim);font-size:10px;cursor:default!important}.search-result{align-items:flex-start!important}.result-copy{flex:1;min-width:0}.result-detail{margin-top:2px;color:var(--dim2);font-size:9px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.result-meta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;max-width:42%}.result-kind{padding:2px 5px;border-radius:5px;background:rgba(214,255,82,.09);color:var(--accent);font:7px/1.2 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em}.result-coords{color:var(--dim2);font:8px/1.2 'DM Mono',monospace}.search-result:focus-visible{outline:1px solid var(--accent);outline-offset:-1px;background:rgba(214,255,82,.06)}
+.panel-intro{margin:0 0 12px;color:var(--dim);font-size:11px;line-height:1.55}.layer-card{padding:0 12px;margin:0 0 10px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.025)}.layer-card .row{padding:11px 0}.layer-card .row label{flex-basis:auto;color:var(--fg);font-size:11px}.layer-data-status{display:flex;align-items:center;gap:10px;margin:3px -4px 10px;padding:9px;border-radius:9px;background:rgba(255,255,255,.035);border:1px solid transparent}.layer-data-status>div{flex:1;min-width:0}.layer-data-status b,.layer-data-status span{display:block}.layer-data-status b{font-size:10px}.layer-data-status span{margin-top:2px;color:var(--dim2);font-size:9px}.layer-data-status:before{content:'';width:7px;height:7px;border-radius:50%;flex:none;background:var(--dim2)}.layer-data-status.ok:before{background:var(--ok);box-shadow:0 0 7px var(--ok)}.layer-data-status.bad{border-color:rgba(255,118,118,.2)}.layer-data-status.bad:before{background:var(--bad)}.layer-data-status.loading:before{background:var(--accent);animation:layer-pulse .8s ease-in-out infinite alternate}@keyframes layer-pulse{to{opacity:.25;transform:scale(.72)}}.display-settings{margin-top:8px}
 h3.sec{margin:17px 0 5px;font:500 8px/1.2 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.15em;color:var(--accent)}.hint{color:var(--dim2);font-size:10px;line-height:1.55;margin:7px 0}.list{margin:0;padding:0;list-style:none}.list li{padding:9px 4px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center;cursor:pointer}.list li:hover{background:rgba(255,255,255,.04)}.list li .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.list li .m{color:var(--dim);font:9px 'DM Mono',monospace;text-align:right}
 table.kv{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}table.kv td{padding:7px 2px;border-bottom:1px solid var(--line);font-size:10px}table.kv td:first-child{color:var(--dim)}table.kv td:last-child{text-align:right}.badge{display:inline-block;padding:3px 7px;border-radius:6px;font-size:8px;font-weight:600;background:rgba(255,255,255,.1);color:var(--dim)}.badge.ok{background:rgba(123,239,170,.14);color:var(--ok)}.badge.bad{background:rgba(255,118,118,.14);color:var(--bad)}.badge.warn{background:rgba(214,255,82,.12);color:var(--accent)}
 
 /* Aerial inspector */
-#scoutbar[hidden]{display:none}#scoutbar{position:absolute;z-index:16;left:50%;bottom:184px;transform:translateX(-50%);width:min(620px,calc(100% - 32px));display:flex;gap:9px;align-items:center;background:rgba(7,15,14,.88);backdrop-filter:blur(20px);border:1px solid var(--line-strong);border-radius:14px;padding:9px 10px;box-shadow:0 16px 40px rgba(0,0,0,.3);pointer-events:auto}
+#scoutbar[hidden]{display:none}#scoutbar{position:absolute;z-index:16;left:18px;bottom:184px;width:min(500px,calc(100% - 36px));display:flex;gap:9px;align-items:center;background:rgba(7,15,14,.88);backdrop-filter:blur(20px);border:1px solid var(--line-strong);border-radius:14px;padding:9px 10px;box-shadow:0 16px 40px rgba(0,0,0,.3);pointer-events:auto}
 #stage.status-hidden .timeline-wrap{border-radius:14px}#stage.timeline-hidden .dock-status{border-bottom:1px solid var(--line);border-radius:14px}#stage.timeline-hidden #sheet{bottom:72px;max-height:calc(100% - 150px)}#stage.timeline-hidden #scoutbar{bottom:84px}#stage.timeline-hidden #sceneHint{bottom:90px}#stage.timeline-hidden #osmAttribution{bottom:68px}#stage.timeline-hidden #toast{bottom:92px}
 .scout-target{width:34px;height:34px;border-radius:10px;border:1px solid rgba(214,255,82,.28);display:grid;place-items:center;flex:none}.scout-target span{width:9px;height:9px;border:1px solid var(--accent);border-radius:50%;box-shadow:0 0 9px rgba(214,255,82,.5)}
 #scoutbar .info{flex:1;min-width:0}#scoutbar .info small{display:block;color:var(--accent);font:7px 'DM Mono',monospace;letter-spacing:.13em}#scoutbar .info b{display:block;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#scoutbar .info span{display:block;color:var(--dim);font:9px 'DM Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#scoutbar .btn[disabled]{opacity:.35}
@@ -153,8 +154,8 @@ table.kv{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}t
   .tabbar{margin-top:5px;gap:1px;justify-content:space-between}.tab{display:block;flex:1;padding:6px 2px;text-align:center;font-size:8px}.tab-key{display:none}
   #sceneHint{bottom:184px;font-size:8px}#toast{bottom:186px}
   #osmAttribution{right:8px;bottom:147px;font-size:7px}
-  #sheet{left:7px;right:7px;bottom:145px;width:auto;max-height:calc(100% - 230px);border-radius:17px;transform:translateY(calc(100% + 160px))}#sheet.open{transform:translateY(0)}.grabber{display:block;position:absolute;top:6px;left:50%;transform:translateX(-50%);width:34px;height:3px;border-radius:2px;background:var(--line-strong)}#sheet header{padding-top:17px}
-  #scoutbar{bottom:151px;padding:7px;width:calc(100% - 14px)}.scout-target{display:none}#scoutbar .info small{display:none}#scoutbar .btn{padding:8px;font-size:9px}#scoutBack{font-size:0!important}#scoutBack:after{content:'POV';font-size:9px}
+  #sheet{left:7px;right:7px;bottom:145px;width:auto;max-height:calc(100% - 230px);border-radius:17px}.grabber{display:block;position:absolute;top:6px;left:50%;transform:translateX(-50%);width:34px;height:3px;border-radius:2px;background:var(--line-strong)}#sheet header{padding-top:17px}
+  #scoutbar{left:7px;bottom:151px;padding:7px;width:calc(100% - 14px)}.scout-target{display:none}#scoutbar .info small,#scoutbar .info span{display:none}#scoutbar .btn{padding:8px;font-size:9px}#scoutBack{display:none}
   #stage.timeline-hidden #sheet{bottom:56px;max-height:calc(100% - 135px)}#stage.timeline-hidden #scoutbar{bottom:62px}#stage.timeline-hidden #sceneHint{bottom:68px}#stage.timeline-hidden #osmAttribution{bottom:49px}#stage.timeline-hidden #toast{bottom:70px}
 }
 @media (max-height:680px) and (min-width:621px){#dock{padding-bottom:6px}.dock-status{display:none}.timeline-wrap{height:90px}#timeline{height:54px}#sceneHint{display:none}#sheet{bottom:132px;max-height:calc(100% - 210px)}#scoutbar{bottom:145px}}
@@ -269,12 +270,12 @@ table.kv{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}t
       <button class="tab" data-tab="when"><span class="tab-key">02</span>Time</button>
       <button class="tab" data-tab="camera"><span class="tab-key">03</span>Camera</button>
       <button class="tab" data-tab="plan"><span class="tab-key">04</span>Plan</button>
-      <button class="tab" data-tab="sky"><span class="tab-key">05</span>Layers</button>
+      <button class="tab" data-tab="layers"><span class="tab-key">05</span>Layers</button>
       <button class="tab" data-tab="about"><span class="tab-key">06</span>About</button>
     </div>
   </div>
 
-  <div id="sheet">
+  <div id="sheet" hidden>
     <div class="grabber"></div>
     <header>
       <div><span class="eyebrow">ASTROSCOUT CONTROL</span><h2 id="sheetTitle"></h2></div>
@@ -2648,7 +2649,7 @@ class UI {
     $('#btnAerial').addEventListener('click', () => app.setViewMode('orbit'));
     $('#btnMap').addEventListener('click', () => app.setViewMode('map'));
     $('#btnSatellite').addEventListener('click', () => app.toggleSatellite());
-    $('#btnLayers').addEventListener('click', () => this.openSheet('sky'));
+    $('#btnLayers').addEventListener('click', () => this.openSheet('layers'));
     $('#btnPlanner').addEventListener('click', () => this.openSheet('plan'));
     $('#btnLocation').addEventListener('click', () => this.openSheet('where'));
     $('#scoutStand').addEventListener('click', () => app.viewFromHere());
@@ -2677,24 +2678,27 @@ class UI {
   progress(f) { $('#prog').style.width = (f == null ? 0 : Math.round(f * 100)) + '%'; }
 
   openSheet(tab) {
-    if (this.tab === tab && this.sheet.classList.contains('open')) return this.closeSheet();
+    if (this.tab === tab && !this.sheet.hidden) return this.closeSheet();
     this.tab = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
+    $('#btnLayers').classList.toggle('panel-open', tab === 'layers');
+    this.sheet.hidden = false;
     this.sheet.classList.add('open');
     this.renderSheet();
   }
   closeSheet() {
-    this.sheet.classList.remove('open'); this.tab = null;
+    this.sheet.classList.remove('open'); this.sheet.hidden = true; this.tab = null;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+    $('#btnLayers').classList.remove('panel-open');
   }
 
   /* ---------- sheet contents ---------- */
   renderSheet() {
     const b = this.body; b.innerHTML = '';
-    const titles = { where: 'Location', when: 'Time', camera: 'Camera', plan: 'Plan the night', sky: 'Sky & terrain', about: 'About' };
+    const titles = { where: 'Location', when: 'Time', camera: 'Camera', plan: 'Plan the night', layers: 'Layers', sky: 'Display settings', about: 'About' };
     this.title.textContent = titles[this.tab] || '';
     ({ where: () => this.panelWhere(b), when: () => this.panelWhen(b), camera: () => this.panelCamera(b),
-       plan: () => this.panelPlan(b), sky: () => this.panelSky(b), about: () => this.panelAbout(b) }[this.tab] || (() => {}))();
+       plan: () => this.panelPlan(b), layers: () => this.panelLayers(b), sky: () => this.panelSky(b), about: () => this.panelAbout(b) }[this.tab] || (() => {}))();
   }
 
   row(parent, label, ctrl) {
@@ -3007,8 +3011,71 @@ class UI {
     host.appendChild(el('p', 'hint', 'Tap a night to jump the view to the moment the core is highest inside that window.'));
   }
 
+  panelLayers(b) {
+    const app = this.app, S = app.S;
+    b.appendChild(el('p', 'panel-intro', 'Control what is drawn on the map and in the sky. Map data status is shown here, so a failed network request is never silent.'));
+    const group = title => {
+      b.appendChild(el('h3', 'sec', title));
+      const card = el('div', 'layer-card'); b.appendChild(card); return card;
+    };
+    const saveFlag = (key, redrawSky = false) => v => {
+      S[key] = v; app.save();
+      if (redrawSky) app.recompute(); else app.invalidate();
+    };
+
+    const map = group('Map surface');
+    this.toggle(map, 'Satellite imagery', () => S.useImagery, () => app.toggleSatellite());
+    this.toggle(map, '3D terrain surface', () => S.showTerrain, saveFlag('showTerrain'));
+
+    const osm = group('OpenStreetMap');
+    this.toggle(osm, 'Roads & tracks', () => S.showRoads, v => app.setOSMLayer('roads', v));
+    this.toggle(osm, 'Places & POIs', () => S.showPOIs, v => app.setOSMLayer('pois', v));
+    const osmStatus = el('div', 'layer-data-status ' + (app._osmError ? 'bad' : app._osmLoading ? 'loading' : app.osmData ? 'ok' : ''));
+    const statusCopy = el('div');
+    statusCopy.appendChild(el('b', null, app._osmLoading ? 'Loading local map data…'
+      : app._osmError ? 'Map data did not load'
+      : app.osmData ? `${app.osmData.roads.length} roads · ${app.osmData.pois.length} POIs ready`
+      : 'Waiting for map data'));
+    statusCopy.appendChild(el('span', null, app._osmError || (app.osmData
+      ? 'Projected directly onto the terrain mesh'
+      : 'Enable either layer to load the current area')));
+    osmStatus.appendChild(statusCopy);
+    if (app._osmError || (!app.osmData && !app._osmLoading)) {
+      const retry = el('button', 'btn', 'Retry');
+      retry.addEventListener('click', () => app.loadOSMOverlays(true));
+      osmStatus.appendChild(retry);
+    }
+    osm.appendChild(osmStatus);
+
+    const sky = group('Sky');
+    this.toggle(sky, 'Sun disc & label', () => S.showSun, saveFlag('showSun', true));
+    this.toggle(sky, 'Moon phase & label', () => S.showMoon, saveFlag('showMoon', true));
+    this.toggle(sky, 'Stars', () => S.showStars, saveFlag('showStars'));
+    this.toggle(sky, 'Constellation figures', () => S.showFigures, saveFlag('showFigures'));
+    this.toggle(sky, 'Alt-azimuth grid', () => S.showGrid, saveFlag('showGrid'));
+    this.toggle(sky, 'Galactic equator', () => S.showGalactic, saveFlag('showGalactic'));
+    this.toggle(sky, 'Core track for the night', () => S.showCorePath, saveFlag('showCorePath'));
+    this.toggle(sky, 'Labels', () => S.showLabels, saveFlag('showLabels'));
+    this.toggle(sky, 'Lens frame', () => S.showFrame, saveFlag('showFrame'));
+
+    const chrome = group('Interface');
+    const setChrome = (key, value) => { S[key] = value; app.save(); app.syncInterfaceChrome(); };
+    this.toggle(chrome, 'Core status', () => S.showCoreChip, v => setChrome('showCoreChip', v));
+    this.toggle(chrome, 'Sky darkness status', () => S.showDarknessChip, v => setChrome('showDarknessChip', v));
+    this.toggle(chrome, 'Moon status', () => S.showMoonChip, v => setChrome('showMoonChip', v));
+    this.toggle(chrome, 'Camera status', () => S.showCameraChip, v => setChrome('showCameraChip', v));
+    this.toggle(chrome, 'Night timeline', () => S.showTimeline, v => setChrome('showTimeline', v));
+    this.toggle(chrome, 'View & terrain status', () => S.showSceneStatus, v => setChrome('showSceneStatus', v));
+    this.toggle(chrome, 'Gesture hints', () => S.showHints, v => setChrome('showHints', v));
+
+    const advanced = el('button', 'btn wide display-settings', 'Display calibration & data sources');
+    advanced.addEventListener('click', () => this.openSheet('sky'));
+    b.appendChild(advanced);
+  }
+
   panelSky(b) {
     const app = this.app, S = app.S;
+    b.appendChild(el('p', 'panel-intro', 'Tune rendering and choose data providers. Layer visibility is managed separately from the Layers panel.'));
     const sq = el('select');
     SKY_QUALITY.forEach((q, i) => { const o = el('option', null, q.n); o.value = i; if (i === S.bortle) o.selected = true; sq.appendChild(o); });
     sq.addEventListener('change', () => {
@@ -3023,29 +3090,6 @@ class UI {
     this.slider(b, 'Terrain inspection light', 0, 1, 0.05, () => S.scoutLight, v => { S.scoutLight = v; app.save(); },
       v => v === 0 ? 'real light only' : (v * 100).toFixed(0) + '%');
     this.slider(b, 'Haze distance', 8000, 200000, 1000, () => S.haze, v => S.haze = v, v => (v / 1000).toFixed(0) + ' km');
-    b.appendChild(el('h3', 'sec', 'Overlays'));
-    this.toggle(b, 'Sun disc & label', () => S.showSun, v => { S.showSun = v; app.save(); app.recompute(); });
-    this.toggle(b, 'Moon phase & label', () => S.showMoon, v => { S.showMoon = v; app.save(); app.recompute(); });
-    this.toggle(b, 'Stars', () => S.showStars, v => S.showStars = v);
-    this.toggle(b, 'Constellation figures', () => S.showFigures, v => S.showFigures = v);
-    this.toggle(b, 'Alt-azimuth grid', () => S.showGrid, v => S.showGrid = v);
-    this.toggle(b, 'Galactic equator', () => S.showGalactic, v => S.showGalactic = v);
-    this.toggle(b, 'Core track for the night', () => S.showCorePath, v => S.showCorePath = v);
-    this.toggle(b, 'Labels', () => S.showLabels, v => S.showLabels = v);
-    this.toggle(b, 'Lens frame', () => S.showFrame, v => S.showFrame = v);
-    this.toggle(b, 'Terrain', () => S.showTerrain, v => S.showTerrain = v);
-    this.toggle(b, 'OpenStreetMap roads', () => S.showRoads, v => app.setOSMLayer('roads', v));
-    this.toggle(b, 'OpenStreetMap places & POIs', () => S.showPOIs, v => app.setOSMLayer('pois', v));
-    b.appendChild(el('p', 'hint', 'Roads follow the terrain surface. Named peaks, viewpoints, shelters, parking and nearby places appear as projected markers. OSM data loads only when either layer is enabled.'));
-    b.appendChild(el('h3', 'sec', 'Interface'));
-    const chrome = (key, value) => { S[key] = value; app.save(); app.syncInterfaceChrome(); };
-    this.toggle(b, 'Core status', () => S.showCoreChip, v => chrome('showCoreChip', v));
-    this.toggle(b, 'Sky darkness status', () => S.showDarknessChip, v => chrome('showDarknessChip', v));
-    this.toggle(b, 'Moon status', () => S.showMoonChip, v => chrome('showMoonChip', v));
-    this.toggle(b, 'Camera status', () => S.showCameraChip, v => chrome('showCameraChip', v));
-    this.toggle(b, 'Night timeline', () => S.showTimeline, v => chrome('showTimeline', v));
-    this.toggle(b, 'View & terrain status', () => S.showSceneStatus, v => chrome('showSceneStatus', v));
-    this.toggle(b, 'Gesture hints', () => S.showHints, v => chrome('showHints', v));
     b.appendChild(el('h3', 'sec', 'Data sources'));
     const ds = el('select');
     for (const k of Object.keys(DEM_SOURCES)) { const o = el('option', null, DEM_SOURCES[k].name); o.value = k; if (k === S.demSource) o.selected = true; ds.appendChild(o); }
@@ -3277,8 +3321,9 @@ class UI {
     // scout bar
     const bar = document.getElementById('scoutbar');
     const aerial = app.mode === 'aerial';
-    bar.hidden = !aerial;
-    if (aerial) {
+    const showScout = aerial && !!app.pick;
+    bar.hidden = !showScout;
+    if (showScout) {
       const mapMode = app.aerialView === 'map';
       bar.classList.toggle('map-mode', mapMode);
       const t = document.getElementById('scoutTitle'), sub = document.getElementById('scoutSub');
@@ -3376,7 +3421,7 @@ const DEFAULTS = {
   lightPol: 0.008, magLimit: 7.3,
   showStars: true, showFigures: true, showGrid: false, showGalactic: false,
   showCorePath: true, showLabels: true, showFrame: true, showTerrain: true,
-  showRoads: false, showPOIs: false,
+  showRoads: true, showPOIs: true,
   showSun: true, showMoon: true,
   showCoreChip: true, showDarknessChip: true, showMoonChip: true, showCameraChip: true,
   showTimeline: true, showSceneStatus: true, showHints: true,
@@ -3408,6 +3453,14 @@ class App {
     if (query.get('satellite') !== '0' && !this.S.imageryDefaultV4) {
       this.S.useImagery = true;
       this.S.imageryDefaultV4 = true;
+      this.save();
+    }
+    // v6 introduces visible map context by default. Migrate v5 state once so
+    // returning users actually see the new roads and POIs; later choices stick.
+    if (!this.S.osmDefaultsV6) {
+      this.S.showRoads = true;
+      this.S.showPOIs = true;
+      this.S.osmDefaultsV6 = true;
       this.save();
     }
     this.date = new Date();
@@ -3835,6 +3888,7 @@ class App {
     this.S[key] = !!on;
     this.save();
     this.syncOSMChrome();
+    this.ui.refresh();
     if (on && !this.osmData) await this.loadOSMOverlays();
     else this.renderOSMOverlays();
     this.ui.refresh();
@@ -3843,11 +3897,26 @@ class App {
   syncOSMChrome() {
     const credit = document.getElementById('osmAttribution');
     if (credit) credit.hidden = !(this.S.showRoads || this.S.showPOIs);
+    const button = document.getElementById('btnLayers');
+    if (button) {
+      const enabled = this.S.showRoads || this.S.showPOIs;
+      button.classList.toggle('layers-active', enabled);
+      button.classList.toggle('loading', !!this._osmLoading);
+      button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+      const label = button.querySelector('span');
+      if (label) label.textContent = this._osmLoading ? 'Loading' : 'Layers';
+      button.title = this._osmLoading ? 'Loading OpenStreetMap layers…'
+        : this._osmError ? `Layers: ${this._osmError}`
+        : this.osmData ? `Layers: ${this.osmData.roads.length} roads, ${this.osmData.pois.length} POIs`
+        : 'Map and sky layers';
+    }
   }
 
-  async loadOSMOverlays() {
+  async loadOSMOverlays(force = false) {
     if (this._osmLoading) return this._osmLoading;
+    if (force) { this.osmData = null; this.osmDataKey = null; }
     const key = `${this.S.lat.toFixed(5)},${this.S.lon.toFixed(5)}`;
+    this._osmError = '';
     this.ui.toast('Loading local OpenStreetMap roads and places…', 5000);
     this._osmLoading = (async () => {
       try {
@@ -3858,13 +3927,18 @@ class App {
         this.renderOSMOverlays();
         this.ui.toast(`OpenStreetMap · ${data.roads.length} roads · ${data.pois.length} places`, 3200);
       } catch (e) {
-        this.ui.toast(`OpenStreetMap unavailable: ${e.name === 'AbortError' ? 'request timed out' : e.message}`, 5000);
+        this._osmError = e.name === 'AbortError' ? 'request timed out' : e.message;
+        this.ui.toast(`OpenStreetMap unavailable: ${this._osmError}`, 5000);
       } finally {
         this._osmLoading = null;
+        this.syncOSMChrome();
+        this.ui.refresh();
         if ((this.S.showRoads || this.S.showPOIs) &&
             `${this.S.lat.toFixed(5)},${this.S.lon.toFixed(5)}` !== key) this.loadOSMOverlays();
       }
     })();
+    this.syncOSMChrome();
+    this.ui.refresh();
     return this._osmLoading;
   }
 
@@ -3938,6 +4012,7 @@ class App {
     this.mesh = null; this.dem = null;
     this.imageryReady = false;
     this.osmData = null; this.osmDataKey = null; this.poiMarkers = [];
+    this.pick = null; this._osmError = '';
     this.renderer.clearTerrain();
     this.renderer.setImagery(null);
     this.renderer.setImagery(null, 'B');
@@ -4375,13 +4450,13 @@ class App {
         } else if (panIds.has(e.pointerId)) {
           panAerial(dx, dy);
         } else {
-          this.orbit.az = ((this.orbit.az - dx * 0.35) % 360 + 360) % 360;
+          this.orbit.az = ((this.orbit.az + dx * 0.35) % 360 + 360) % 360;
           this.orbit.pitch = Math.max(8, Math.min(88, this.orbit.pitch + dy * 0.25));
         }
         this.dirty = true;
       } else if (pts.size === 1) {
         const degPerPx = this.view.vfovDeg / (this.renderer.h / this.dpr);
-        this.view.az = ((this.view.az - dx * degPerPx) % 360 + 360) % 360;
+        this.view.az = ((this.view.az + dx * degPerPx) % 360 + 360) % 360;
         this.view.alt = Math.max(-85, Math.min(88, this.view.alt + dy * degPerPx));
         this.dirty = true;
       } else if (pts.size === 2) {
@@ -4406,7 +4481,10 @@ class App {
     stage.addEventListener('pointerup', up);
     stage.addEventListener('pointercancel', up);
     stage.addEventListener('contextmenu', e => { if (this.mode === 'aerial') e.preventDefault(); });
-    stage.addEventListener('wheel', e => { e.preventDefault(); this.zoom(e.deltaY > 0 ? 0.92 : 1.087); }, { passive: false });
+    stage.addEventListener('wheel', e => {
+      if (e.target.closest('#dock,#sheet,#top,#viewSwitcher,#toolrail,#scoutbar')) return;
+      e.preventDefault(); this.zoom(e.deltaY > 0 ? 0.92 : 1.087);
+    }, { passive: false });
     window.addEventListener('keydown', e => {
       const k = e.key;
       if (k === 'ArrowLeft') this.view.az = (this.view.az - 2 + 360) % 360;
@@ -4586,7 +4664,7 @@ function dedupePlaces(items) {
 }
 
 UI.prototype.refresh = function () {
-  if (this.sheet.classList.contains('open')) this.renderSheet();
+  if (!this.sheet.hidden) this.renderSheet();
   this.app.invalidate();
 };
 
@@ -4601,7 +4679,7 @@ return {};
 </script>
 <script>
 if ('serviceWorker' in navigator) {
-  addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=5').catch(() => {}));
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=6').catch(() => {}));
 }
 </script>
 </body>

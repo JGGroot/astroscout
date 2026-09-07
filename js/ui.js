@@ -29,7 +29,7 @@ export class UI {
     $('#btnAerial').addEventListener('click', () => app.setViewMode('orbit'));
     $('#btnMap').addEventListener('click', () => app.setViewMode('map'));
     $('#btnSatellite').addEventListener('click', () => app.toggleSatellite());
-    $('#btnLayers').addEventListener('click', () => this.openSheet('sky'));
+    $('#btnLayers').addEventListener('click', () => this.openSheet('layers'));
     $('#btnPlanner').addEventListener('click', () => this.openSheet('plan'));
     $('#btnLocation').addEventListener('click', () => this.openSheet('where'));
     $('#scoutStand').addEventListener('click', () => app.viewFromHere());
@@ -58,24 +58,27 @@ export class UI {
   progress(f) { $('#prog').style.width = (f == null ? 0 : Math.round(f * 100)) + '%'; }
 
   openSheet(tab) {
-    if (this.tab === tab && this.sheet.classList.contains('open')) return this.closeSheet();
+    if (this.tab === tab && !this.sheet.hidden) return this.closeSheet();
     this.tab = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
+    $('#btnLayers').classList.toggle('panel-open', tab === 'layers');
+    this.sheet.hidden = false;
     this.sheet.classList.add('open');
     this.renderSheet();
   }
   closeSheet() {
-    this.sheet.classList.remove('open'); this.tab = null;
+    this.sheet.classList.remove('open'); this.sheet.hidden = true; this.tab = null;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+    $('#btnLayers').classList.remove('panel-open');
   }
 
   /* ---------- sheet contents ---------- */
   renderSheet() {
     const b = this.body; b.innerHTML = '';
-    const titles = { where: 'Location', when: 'Time', camera: 'Camera', plan: 'Plan the night', sky: 'Sky & terrain', about: 'About' };
+    const titles = { where: 'Location', when: 'Time', camera: 'Camera', plan: 'Plan the night', layers: 'Layers', sky: 'Display settings', about: 'About' };
     this.title.textContent = titles[this.tab] || '';
     ({ where: () => this.panelWhere(b), when: () => this.panelWhen(b), camera: () => this.panelCamera(b),
-       plan: () => this.panelPlan(b), sky: () => this.panelSky(b), about: () => this.panelAbout(b) }[this.tab] || (() => {}))();
+       plan: () => this.panelPlan(b), layers: () => this.panelLayers(b), sky: () => this.panelSky(b), about: () => this.panelAbout(b) }[this.tab] || (() => {}))();
   }
 
   row(parent, label, ctrl) {
@@ -388,8 +391,71 @@ export class UI {
     host.appendChild(el('p', 'hint', 'Tap a night to jump the view to the moment the core is highest inside that window.'));
   }
 
+  panelLayers(b) {
+    const app = this.app, S = app.S;
+    b.appendChild(el('p', 'panel-intro', 'Control what is drawn on the map and in the sky. Map data status is shown here, so a failed network request is never silent.'));
+    const group = title => {
+      b.appendChild(el('h3', 'sec', title));
+      const card = el('div', 'layer-card'); b.appendChild(card); return card;
+    };
+    const saveFlag = (key, redrawSky = false) => v => {
+      S[key] = v; app.save();
+      if (redrawSky) app.recompute(); else app.invalidate();
+    };
+
+    const map = group('Map surface');
+    this.toggle(map, 'Satellite imagery', () => S.useImagery, () => app.toggleSatellite());
+    this.toggle(map, '3D terrain surface', () => S.showTerrain, saveFlag('showTerrain'));
+
+    const osm = group('OpenStreetMap');
+    this.toggle(osm, 'Roads & tracks', () => S.showRoads, v => app.setOSMLayer('roads', v));
+    this.toggle(osm, 'Places & POIs', () => S.showPOIs, v => app.setOSMLayer('pois', v));
+    const osmStatus = el('div', 'layer-data-status ' + (app._osmError ? 'bad' : app._osmLoading ? 'loading' : app.osmData ? 'ok' : ''));
+    const statusCopy = el('div');
+    statusCopy.appendChild(el('b', null, app._osmLoading ? 'Loading local map data…'
+      : app._osmError ? 'Map data did not load'
+      : app.osmData ? `${app.osmData.roads.length} roads · ${app.osmData.pois.length} POIs ready`
+      : 'Waiting for map data'));
+    statusCopy.appendChild(el('span', null, app._osmError || (app.osmData
+      ? 'Projected directly onto the terrain mesh'
+      : 'Enable either layer to load the current area')));
+    osmStatus.appendChild(statusCopy);
+    if (app._osmError || (!app.osmData && !app._osmLoading)) {
+      const retry = el('button', 'btn', 'Retry');
+      retry.addEventListener('click', () => app.loadOSMOverlays(true));
+      osmStatus.appendChild(retry);
+    }
+    osm.appendChild(osmStatus);
+
+    const sky = group('Sky');
+    this.toggle(sky, 'Sun disc & label', () => S.showSun, saveFlag('showSun', true));
+    this.toggle(sky, 'Moon phase & label', () => S.showMoon, saveFlag('showMoon', true));
+    this.toggle(sky, 'Stars', () => S.showStars, saveFlag('showStars'));
+    this.toggle(sky, 'Constellation figures', () => S.showFigures, saveFlag('showFigures'));
+    this.toggle(sky, 'Alt-azimuth grid', () => S.showGrid, saveFlag('showGrid'));
+    this.toggle(sky, 'Galactic equator', () => S.showGalactic, saveFlag('showGalactic'));
+    this.toggle(sky, 'Core track for the night', () => S.showCorePath, saveFlag('showCorePath'));
+    this.toggle(sky, 'Labels', () => S.showLabels, saveFlag('showLabels'));
+    this.toggle(sky, 'Lens frame', () => S.showFrame, saveFlag('showFrame'));
+
+    const chrome = group('Interface');
+    const setChrome = (key, value) => { S[key] = value; app.save(); app.syncInterfaceChrome(); };
+    this.toggle(chrome, 'Core status', () => S.showCoreChip, v => setChrome('showCoreChip', v));
+    this.toggle(chrome, 'Sky darkness status', () => S.showDarknessChip, v => setChrome('showDarknessChip', v));
+    this.toggle(chrome, 'Moon status', () => S.showMoonChip, v => setChrome('showMoonChip', v));
+    this.toggle(chrome, 'Camera status', () => S.showCameraChip, v => setChrome('showCameraChip', v));
+    this.toggle(chrome, 'Night timeline', () => S.showTimeline, v => setChrome('showTimeline', v));
+    this.toggle(chrome, 'View & terrain status', () => S.showSceneStatus, v => setChrome('showSceneStatus', v));
+    this.toggle(chrome, 'Gesture hints', () => S.showHints, v => setChrome('showHints', v));
+
+    const advanced = el('button', 'btn wide display-settings', 'Display calibration & data sources');
+    advanced.addEventListener('click', () => this.openSheet('sky'));
+    b.appendChild(advanced);
+  }
+
   panelSky(b) {
     const app = this.app, S = app.S;
+    b.appendChild(el('p', 'panel-intro', 'Tune rendering and choose data providers. Layer visibility is managed separately from the Layers panel.'));
     const sq = el('select');
     SKY_QUALITY.forEach((q, i) => { const o = el('option', null, q.n); o.value = i; if (i === S.bortle) o.selected = true; sq.appendChild(o); });
     sq.addEventListener('change', () => {
@@ -404,29 +470,6 @@ export class UI {
     this.slider(b, 'Terrain inspection light', 0, 1, 0.05, () => S.scoutLight, v => { S.scoutLight = v; app.save(); },
       v => v === 0 ? 'real light only' : (v * 100).toFixed(0) + '%');
     this.slider(b, 'Haze distance', 8000, 200000, 1000, () => S.haze, v => S.haze = v, v => (v / 1000).toFixed(0) + ' km');
-    b.appendChild(el('h3', 'sec', 'Overlays'));
-    this.toggle(b, 'Sun disc & label', () => S.showSun, v => { S.showSun = v; app.save(); app.recompute(); });
-    this.toggle(b, 'Moon phase & label', () => S.showMoon, v => { S.showMoon = v; app.save(); app.recompute(); });
-    this.toggle(b, 'Stars', () => S.showStars, v => S.showStars = v);
-    this.toggle(b, 'Constellation figures', () => S.showFigures, v => S.showFigures = v);
-    this.toggle(b, 'Alt-azimuth grid', () => S.showGrid, v => S.showGrid = v);
-    this.toggle(b, 'Galactic equator', () => S.showGalactic, v => S.showGalactic = v);
-    this.toggle(b, 'Core track for the night', () => S.showCorePath, v => S.showCorePath = v);
-    this.toggle(b, 'Labels', () => S.showLabels, v => S.showLabels = v);
-    this.toggle(b, 'Lens frame', () => S.showFrame, v => S.showFrame = v);
-    this.toggle(b, 'Terrain', () => S.showTerrain, v => S.showTerrain = v);
-    this.toggle(b, 'OpenStreetMap roads', () => S.showRoads, v => app.setOSMLayer('roads', v));
-    this.toggle(b, 'OpenStreetMap places & POIs', () => S.showPOIs, v => app.setOSMLayer('pois', v));
-    b.appendChild(el('p', 'hint', 'Roads follow the terrain surface. Named peaks, viewpoints, shelters, parking and nearby places appear as projected markers. OSM data loads only when either layer is enabled.'));
-    b.appendChild(el('h3', 'sec', 'Interface'));
-    const chrome = (key, value) => { S[key] = value; app.save(); app.syncInterfaceChrome(); };
-    this.toggle(b, 'Core status', () => S.showCoreChip, v => chrome('showCoreChip', v));
-    this.toggle(b, 'Sky darkness status', () => S.showDarknessChip, v => chrome('showDarknessChip', v));
-    this.toggle(b, 'Moon status', () => S.showMoonChip, v => chrome('showMoonChip', v));
-    this.toggle(b, 'Camera status', () => S.showCameraChip, v => chrome('showCameraChip', v));
-    this.toggle(b, 'Night timeline', () => S.showTimeline, v => chrome('showTimeline', v));
-    this.toggle(b, 'View & terrain status', () => S.showSceneStatus, v => chrome('showSceneStatus', v));
-    this.toggle(b, 'Gesture hints', () => S.showHints, v => chrome('showHints', v));
     b.appendChild(el('h3', 'sec', 'Data sources'));
     const ds = el('select');
     for (const k of Object.keys(DEM_SOURCES)) { const o = el('option', null, DEM_SOURCES[k].name); o.value = k; if (k === S.demSource) o.selected = true; ds.appendChild(o); }
@@ -658,8 +701,9 @@ export class UI {
     // scout bar
     const bar = document.getElementById('scoutbar');
     const aerial = app.mode === 'aerial';
-    bar.hidden = !aerial;
-    if (aerial) {
+    const showScout = aerial && !!app.pick;
+    bar.hidden = !showScout;
+    if (showScout) {
       const mapMode = app.aerialView === 'map';
       bar.classList.toggle('map-mode', mapMode);
       const t = document.getElementById('scoutTitle'), sub = document.getElementById('scoutSub');
