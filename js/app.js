@@ -1042,6 +1042,9 @@ class App {
       const prev = pts.get(e.pointerId);
       pts.set(e.pointerId, e);
       const dx = e.clientX - prev.clientX, dy = e.clientY - prev.clientY;
+      // A mouse orbits like a grabbed globe; direct-touch camera movement keeps
+      // the reversed direction requested for phones and tablets.
+      const horizontalDirection = e.pointerType === 'mouse' ? -1 : 1;
       if (Math.abs(dx) + Math.abs(dy) > 3) this._moved = true;
       if (pts.size === 1 && this.mode === 'aerial') {
         if (this.aerialView === 'map') {
@@ -1050,13 +1053,13 @@ class App {
         } else if (panIds.has(e.pointerId)) {
           panAerial(dx, dy);
         } else {
-          this.orbit.az = ((this.orbit.az + dx * 0.35) % 360 + 360) % 360;
+          this.orbit.az = ((this.orbit.az + dx * 0.35 * horizontalDirection) % 360 + 360) % 360;
           this.orbit.pitch = Math.max(8, Math.min(88, this.orbit.pitch + dy * 0.25));
         }
         this.dirty = true;
       } else if (pts.size === 1) {
         const degPerPx = this.view.vfovDeg / (this.renderer.h / this.dpr);
-        this.view.az = ((this.view.az + dx * degPerPx) % 360 + 360) % 360;
+        this.view.az = ((this.view.az + dx * degPerPx * horizontalDirection) % 360 + 360) % 360;
         this.view.alt = Math.max(-85, Math.min(88, this.view.alt + dy * degPerPx));
         this.dirty = true;
       } else if (pts.size === 2) {

@@ -39,8 +39,9 @@ proper darkness* — and then shows you the frame.
   distance, then **View POV** to move — the mesh rebuilds in about 80 ms from
   tiles already in hand, and the planner's windows recompute against the new
   skyline. Drag pans the 2D map; in 3D, drag orbits while Shift/right-drag or a
-  two-finger drag pans; pinch zooms in either view. Horizontal camera dragging
-  follows the drag direction in both 3D and ground POV.
+  two-finger drag pans; pinch zooms in either view. Mouse camera dragging uses
+  globe-style orbiting; touch uses the reversed horizontal direction requested
+  for phones and tablets.
 - **OpenStreetMap layers.** Independently overlay terrain-following roads and
   labelled nearby peaks, viewpoints, shelters, parking and places. Data is
   requested on demand for only the local viewport and cached for 24 hours. A

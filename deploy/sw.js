@@ -1,6 +1,6 @@
 /* sw.js — offline shell plus an opportunistic tile cache. */
-const VERSION = 'astroscout-flat-v6';
-const SHELL = ['./', './index.html', './manifest.webmanifest?v=6',
+const VERSION = 'astroscout-flat-v7';
+const SHELL = ['./', './index.html', './manifest.webmanifest?v=7',
   './icon-192.png', './icon-512.png', './icon-maskable.png'];
 const TILE_HOSTS = ['s3.amazonaws.com', 'elevation-tiles-prod.s3.amazonaws.com',
   'services.arcgisonline.com', 'tile.openstreetmap.org',

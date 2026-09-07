@@ -228,8 +228,8 @@ try {
     expression: `(() => ({ az: app.orbit.az, pitch: app.orbit.pitch }))()`, returnByValue: true
   })).result.value;
   const orbitDelta = ((orbitLookAfter.az - orbitLookBefore.az + 540) % 360) - 180;
-  if (orbitDelta <= 0 || Math.abs(orbitLookAfter.pitch - orbitLookBefore.pitch) > 0.01)
-    throw new Error(`Orbit horizontal inversion failure: ${JSON.stringify({ orbitLookBefore, orbitLookAfter })}`);
+  if (orbitDelta >= 0 || Math.abs(orbitLookAfter.pitch - orbitLookBefore.pitch) > 0.01)
+    throw new Error(`Orbit desktop drag-direction failure: ${JSON.stringify({ orbitLookBefore, orbitLookAfter })}`);
 
   const povLookBefore = (await send('Runtime.evaluate', {
     expression: `(() => { app.setViewMode('pov'); app.blend = 0; return { az: app.view.az, alt: app.view.alt }; })()`,
@@ -242,9 +242,9 @@ try {
     expression: `(() => ({ az: app.view.az, alt: app.view.alt }))()`, returnByValue: true
   })).result.value;
   const povDelta = ((povLookAfter.az - povLookBefore.az + 540) % 360) - 180;
-  if (povDelta <= 0 || Math.abs(povLookAfter.alt - povLookBefore.alt) > 0.01)
-    throw new Error(`POV horizontal inversion failure: ${JSON.stringify({ povLookBefore, povLookAfter })}`);
-  diagnostics.cameraDrag = 'horizontal drag inverted in 3D and POV · pitch direction unchanged';
+  if (povDelta >= 0 || Math.abs(povLookAfter.alt - povLookBefore.alt) > 0.01)
+    throw new Error(`POV desktop drag-direction failure: ${JSON.stringify({ povLookBefore, povLookAfter })}`);
+  diagnostics.cameraDrag = 'desktop horizontal drag restored in 3D and POV · touch remains inverted · pitch unchanged';
 
   const panBefore = (await send('Runtime.evaluate', {
     expression: `(() => { app.setViewMode('orbit'); app.blend = 1; app.invalidate(); return { cx: app.orbit.cx, cz: app.orbit.cz, az: app.orbit.az, pitch: app.orbit.pitch }; })()`,
